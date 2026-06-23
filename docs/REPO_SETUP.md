@@ -30,7 +30,9 @@ Confirm that no personal backup, InBody file, Apple Health export, GPX/TCX/FIT f
 4. No build output directory is required; Wrangler reads `assets.directory` from `wrangler.jsonc`.
 5. Node.js is pinned to 20 through `.node-version` and `package.json`.
 
-The Cloudflare project name is `trail-runner-coach`. If that name is already used in the account, change only `wrangler.jsonc`; keep the product and package names unchanged.
+The Cloudflare Worker/project name for this package is `trail-runner-coaches`, as configured in `wrangler.jsonc`.
+
+The GitHub repository, npm package, product name, PWA name, IndexedDB name and iOS app remain `trail-runner-coach` / **Trail Runner Coach**. Do not rename those merely to match the Cloudflare Worker.
 
 ## iOS companion
 

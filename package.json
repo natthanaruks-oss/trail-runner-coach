@@ -1,6 +1,6 @@
 {
   "name": "trail-runner-coach",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Local-first adaptive trail training coach with multi-race planning and Apple Health bridge",

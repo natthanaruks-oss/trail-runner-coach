@@ -1,6 +1,13 @@
-# Build Report — Trail Runner Coach 1.0.0
+# Build Report — Trail Runner Coach 1.0.1
 
 Build date: 23 June 2026
+
+## Deployment-name update
+
+- Cloudflare Worker/project name: `trail-runner-coaches`.
+- GitHub repository and npm package remain `trail-runner-coach`.
+- Product display name remains **Trail Runner Coach**.
+- IndexedDB and local application identifiers are unchanged, preventing unnecessary local-data migration.
 
 ## Scope completed
 

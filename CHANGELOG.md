@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1 — Cloudflare deployment name
+
+- Changed only the Cloudflare Worker name in `wrangler.jsonc` to `trail-runner-coaches`.
+- Kept the product, GitHub repository, npm package, IndexedDB, PWA and iOS app names unchanged.
+- Updated deployment documentation to prevent accidental renaming of application data identifiers.
+
 ## 1.0.0 — Trail Runner Coach foundation
 
 - Renamed the product, repository, Cloudflare project, PWA and iOS companion.

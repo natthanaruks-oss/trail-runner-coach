@@ -43,7 +43,7 @@ Deploy to Cloudflare Workers & Pages:
 npm run deploy
 ```
 
-`wrangler.jsonc` deploys `./public` and uses SPA fallback.
+`wrangler.jsonc` deploys `./public` to the Cloudflare Worker **`trail-runner-coaches`** and uses SPA fallback.
 
 ## Race and plan model
 
