@@ -1,0 +1,13 @@
+{
+  "name": "Trail Runner Coach",
+  "short_name": "Trail Coach",
+  "description": "Adaptive trail training, strain, recovery and multi-race planning",
+  "start_url": "/#/today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07101d",
+  "theme_color": "#0b1220",
+  "icons": [
+    { "src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

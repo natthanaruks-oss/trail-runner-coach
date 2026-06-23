@@ -1,0 +1,23 @@
+{
+  "schema": "trail-runner-coach-body-composition",
+  "version": 1,
+  "sourceDocument": "Example only — no personal data",
+  "profilePatch": {
+    "athlete": {
+      "heightCm": 175,
+      "weightKg": 75
+    }
+  },
+  "records": [
+    {
+      "id": "body-example-2026-01-01",
+      "date": "2026-01-01",
+      "weightKg": 75,
+      "skeletalMuscleMassKg": 34,
+      "bodyFatMassKg": 15,
+      "percentBodyFat": 20,
+      "leanBodyMassKg": 60,
+      "source": "inbody_scan"
+    }
+  ]
+}

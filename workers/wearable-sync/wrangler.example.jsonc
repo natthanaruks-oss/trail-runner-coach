@@ -1,0 +1,8 @@
+{
+  "name": "trail-runner-coach-wearable-sync",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-23",
+  "vars": {
+    "APP_ORIGIN": "https://YOUR-PAGES-DOMAIN.pages.dev"
+  }
+}

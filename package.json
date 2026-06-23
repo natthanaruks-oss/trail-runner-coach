@@ -1,0 +1,22 @@
+{
+  "name": "trail-runner-coach",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first adaptive trail training coach with multi-race planning and Apple Health bridge",
+  "scripts": {
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy",
+    "test": "node --test",
+    "check": "node scripts/verify.mjs && node --test",
+    "deploy:dry-run": "npx wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
+    "wrangler": "^4.20.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
