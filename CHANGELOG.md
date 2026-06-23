@@ -17,3 +17,9 @@
 - Changed IndexedDB to `trail_runner_coach` version 3.
 - Updated backup names, service-worker cache and privacy exclusions.
 - Retained import compatibility for earlier RTC70 backups and InBody schema.
+
+## 1.0.2 — 2026-06-24
+
+- Updated Cloudflare build runtime from Node.js 20 to Node.js 22.16.0.
+- Pinned Wrangler to 4.103.0 to prevent unplanned CLI upgrades.
+- Updated package engine requirement to Node.js >=22.0.0.

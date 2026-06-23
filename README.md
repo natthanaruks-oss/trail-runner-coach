@@ -84,3 +84,7 @@ The previously generated personal InBody import remains compatible because the i
 - Apple Health requires building the iOS companion on macOS/Xcode and testing on a physical iPhone.
 - Garmin and Suunto live sync are scaffolded but still require provider approval, OAuth credentials and a Worker deployment.
 - The bundled 20-week plan is a baseline template; future plan generation should account for race distance, vertical, technicality, training history, injury risk and available weeks rather than scaling distance alone.
+
+## Build runtime
+
+Cloudflare Workers Builds must use Node.js 22.16.0 or newer. The repository pins this through `.node-version`, and Wrangler is pinned to 4.103.0.
