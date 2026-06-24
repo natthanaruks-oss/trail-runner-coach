@@ -1,5 +1,5 @@
 import { calculateRecovery } from './recovery.js';
-import { calculateBehaviorLoad, calculateLoadTrend, loadWindow } from './strain.js';
+import { calculateBehaviorLoad, calculateDailyStrain, calculateLoadTrend, strainWindow } from './strain.js';
 import { addDays, localDateKey } from '../core/date.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -12,7 +12,7 @@ export function evaluatePainSafety(checkin, painLogs = [], dateKey = localDateKe
     other: Number(checkin?.pain?.other) || 0
   };
   const maxPain = Math.max(...Object.values(currentPain));
-  const recent = painLogs.filter(log => log.date >= addDays(dateKey, -6));
+  const recent = painLogs.filter(log => log.date >= addDays(dateKey, -6) && log.date <= dateKey);
   const recurring = Object.entries(recent.reduce((acc, log) => {
     if (Number(log.severity) >= 3) acc[log.area] = (acc[log.area] || 0) + 1;
     return acc;
@@ -46,7 +46,15 @@ export function evaluatePainSafety(checkin, painLogs = [], dateKey = localDateKe
 }
 
 export function calculateReadiness({ checkin, checkinHistory = [], activities = [], painLogs = [], settings = {}, dateKey = localDateKey() }) {
-  const recovery = calculateRecovery(checkin, settings, checkinHistory);
+  const priorCheckins = checkinHistory.filter(item => item.date < dateKey);
+  const previousDate = addDays(dateKey, -1);
+  const previousDayCheckin = checkinHistory.find(item => item.date === previousDate) || null;
+  const previousDayStrain = calculateDailyStrain(activities, previousDate, previousDayCheckin, priorCheckins.filter(item => item.date < previousDate));
+  const recentStrain = strainWindow(activities, checkinHistory, previousDate, 3);
+  const recovery = calculateRecovery(checkin, settings, checkinHistory, {
+    previousDayStrain,
+    recentStrainAverage: recentStrain.averageScore
+  });
   const subjectiveComplete = Boolean(
     Number.isFinite(Number(checkin?.fatigue)) &&
     Number.isFinite(Number(checkin?.stress)) &&
@@ -55,14 +63,10 @@ export function calculateReadiness({ checkin, checkinHistory = [], activities = 
   );
   const pain = evaluatePainSafety(checkin, painLogs, dateKey);
   const trend = calculateLoadTrend(activities, dateKey);
-  const recent3 = loadWindow(activities, addDays(dateKey, -1), 3);
-  const previousDayCheckin = checkinHistory.find(item => item.date === addDays(dateKey, -1)) || null;
-  const behaviorLoad = calculateBehaviorLoad(previousDayCheckin, checkinHistory);
-  const recentLoadPenalty = clamp(recent3.totalLoad / 45, 0, 22);
-  const trendPenalty = trend.warning.level === 'high' ? 12 : trend.warning.level === 'moderate' ? 6 : 0;
-  const recoveryBase = recovery.score ?? 60;
-  const behaviorPenalty = behaviorLoad.penalty || 0;
-  let score = recoveryBase * 0.72 + pain.score * 0.28 - recentLoadPenalty - trendPenalty - behaviorPenalty;
+  const behaviorLoad = calculateBehaviorLoad(previousDayCheckin, priorCheckins);
+  const trendPenalty = trend.warning.level === 'high' ? 10 : trend.warning.level === 'moderate' ? 5 : 0;
+  const recoveryBase = recovery.score ?? 58;
+  let score = recoveryBase * 0.82 + pain.score * 0.18 - trendPenalty;
 
   const flags = [...recovery.flags, ...pain.flags, ...behaviorLoad.flags];
   if (trend.warning.level === 'high') flags.push('rapid_load_increase');
@@ -76,13 +80,20 @@ export function calculateReadiness({ checkin, checkinHistory = [], activities = 
 
   score = Math.round(clamp(score, 0, 100));
   const status = pain.hardStop || score < 45 ? 'red' : score < 70 || pain.caution ? 'yellow' : 'green';
+  const activityHistoryAvailable = activities.some(activity => activity.date >= addDays(dateKey, -7) && activity.date <= dateKey);
   const confidence = Math.round(clamp(
-    (recovery.confidence || 0) * 0.7 +
-    (checkin ? 15 : 0) +
-    (activities.some(activity => activity.date >= addDays(dateKey, -7)) ? 15 : 0),
+    (recovery.confidence || 0) * 0.78 +
+    (subjectiveComplete ? 12 : 0) +
+    (activityHistoryAvailable ? 10 : 0),
     10,
     100
   ));
+
+  const drivers = [
+    ...recovery.drivers.slice(0, 5).map(item => ({ key: item.key, direction: item.direction, impact: item.impact, value: item.value })),
+    ...(pain.caution || pain.hardStop ? [{ key: 'painSafety', direction: 'negative', impact: pain.hardStop ? -40 : -18, value: pain.maxPain }] : []),
+    ...(trendPenalty ? [{ key: 'loadTrend', direction: 'negative', impact: -trendPenalty, value: trend.weekChangePct }] : [])
+  ].sort((a, b) => Math.abs(b.impact || 0) - Math.abs(a.impact || 0));
 
   return {
     date: dateKey,
@@ -92,11 +103,12 @@ export function calculateReadiness({ checkin, checkinHistory = [], activities = 
     recovery,
     pain,
     loadTrend: trend,
-    recentLoadPenalty: Math.round(recentLoadPenalty),
+    previousDayStrain,
+    recentStrainAverage: recentStrain.averageScore,
     trendPenalty,
     behaviorLoad,
-    behaviorPenalty,
     subjectiveComplete,
+    drivers,
     flags: [...new Set(flags)]
   };
 }

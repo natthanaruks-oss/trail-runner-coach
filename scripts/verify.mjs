@@ -12,6 +12,7 @@ const required = [
   'public/js/views/fuel.js',
   'public/js/views/training.js',
   'public/js/views/log.js',
+  'public/js/views/scores.js',
   'public/js/data/food-catalog.js',
   'public/js/data/training-library.js',
   'public/manifest.webmanifest',
@@ -41,11 +42,11 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '1.1.0') throw new Error(`Expected package version 1.1.0, received ${packageJson.version}`);
+if (packageJson.version !== '1.2.0') throw new Error(`Expected package version 1.2.0, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v1.1.0')) throw new Error('Service-worker cache version was not bumped to 1.1.0');
+if (!serviceWorker.includes('trail-runner-coach-v1.2.0')) throw new Error('Service-worker cache version was not bumped to 1.2.0');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '1.1.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '1.2.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const foodCatalog = await readFile(resolve(root, 'public/js/data/food-catalog.js'), 'utf8');
 const foodCount = (foodCatalog.match(/"id":"legacy-food-/g) || []).length;
 if (foodCount < 400) throw new Error(`Legacy food catalog is unexpectedly small: ${foodCount}`);

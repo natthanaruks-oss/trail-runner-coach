@@ -1,41 +1,50 @@
-# Build Report — Trail Runner Coach 1.1.0
+# Build Report — Trail Runner Coach 1.2.0
 
-Build date: 24 June 2026
+## Scope delivered
 
-## Scope completed
+- Preserved all v1.1 primary workflows: Today, Plan, Train, Food and Log.
+- Preserved the 449-food catalog, custom foods, catalog overrides, water, energy balance, rehab, pain, body, sleep, backup and legacy migration.
+- Added user-facing Strain 0–21, Recovery 0–100 and Readiness 0–100.
+- Added workout + behavior Strain, including trail, vertical gain/loss, downhill, night running, steps, active energy and exercise minutes.
+- Added personalized RHR/HRV/Sleep baselines and recent Strain context to Recovery.
+- Added Data Confidence, score drivers, baseline maturity and a 14-day score detail page.
+- Added configurable sleep target.
+- Retained Pain Safety Gate and wearable-only Yellow cap.
 
-- Rebuilt the useful `roadtopyc70` workflows on the current modular and IndexedDB foundation.
-- Kept multi-race planning, readiness/strain/recovery engines and Apple Health architecture.
-- Restored the five primary workflows: Today, Plan, Train, Food and Log.
-- Added 449 searchable legacy food records with category, recent-food and portion workflows.
-- Added daily food CRUD, custom food CRUD, catalog edit/hide/reset through non-destructive user overrides, water tracking and complete-day flags.
-- Added energy-balance trends for 7/14/30 days with incomplete-day protection.
-- Restored Rehab, Strength, Running Drills, home equipment, Motivation, Pain, Weight/Body and Sleep/RHR workflows.
-- Expanded old-backup migration for food, custom foods, water, sleep, resting HR, pain, body weight and equipment.
-- Full JSON backup now includes all version-4 IndexedDB stores.
-- No personal InBody, Apple Health or activity data is included in the repository package.
+## Verification evidence
 
-## Verification performed
+- Repository verification: passed.
+- Bundled food records: 449.
+- Automated tests: 16/16 passed.
+- Browser/IndexedDB integration test: passed, including the new `#/scores` route.
+- Legacy backup migration test: passed.
+- Nutrition CRUD and catalog override integration: passed.
+- Strain 0–21 behavior-only load test: passed.
+- High previous Strain reducing Recovery test: passed.
+- Pain ≥6 forcing Red Readiness test: passed.
+- Cloudflare Wrangler 4.103.0 dry-run: passed; 57 public asset files detected.
+- npm audit: 0 vulnerabilities.
 
-- Repository verification: passed; 449 bundled food records detected.
-- JavaScript syntax and module loading: passed.
-- Automated tests: **14/14 passed**.
-- Browser integration: primary routes, multi-race creation, food custom-entry workflow, catalog override, hide and restore: passed.
-- Nutrition totals and complete-day energy balance: passed.
-- Legacy backup migration for food, water, sleep, RHR, pain, body and equipment: passed.
-- Pain ≥6 readiness safety gate: passed.
-- Apple Health normalization and current/legacy InBody schema tests: passed.
-- Cloudflare Wrangler 4.103.0 deploy dry-run: passed; 56 public assets read.
-- Fresh `npm ci` from package-lock without an existing `node_modules`: passed.
-- npm audit: **0 vulnerabilities**.
-
-## Deployment configuration
+## Runtime and deployment
 
 - Node: 22.16.0
-- Cloudflare Worker: `trail-runner-coaches`
-- Static assets: `./public`
-- SPA fallback: enabled
-- Package/application version: 1.1.0
-- IndexedDB schema: version 4
+- Wrangler: 4.103.0
+- Cloudflare Worker name: `trail-runner-coaches`
+- Static asset directory: `./public`
+- Package/application/PWA cache version: 1.2.0
+- IndexedDB database: `trail_runner_coach`, schema version 4
 
-For the current Cloudflare npm installer issue, keep `SKIP_DEPENDENCY_INSTALL=true`, leave Build command empty (or use `echo "No build step"`) and use `pnpm dlx wrangler@4.103.0 deploy` as Deploy command.
+Recommended Cloudflare settings when automatic npm install is disabled:
+
+```text
+SKIP_DEPENDENCY_INSTALL=true
+Build command: leave blank, or echo "No build step"
+Deploy command: pnpm dlx wrangler@4.103.0 deploy
+Root directory: /
+```
+
+Do not enter the literal word `None` in Build command.
+
+## Privacy check
+
+The deploy package excludes `node_modules`, `.wrangler`, `.env`, Apple Health exports, InBody imports, FIT/TCX/GPX files, user backups and signing data.

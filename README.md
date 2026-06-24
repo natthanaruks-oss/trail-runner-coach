@@ -2,9 +2,9 @@
 
 Local-first adaptive trail running coach สำหรับใช้งานระยะยาวหลายสนาม โดยรวมแผนซ้อม ผลจริง Strain, Recovery, Readiness, Pain/Rehab, อาหาร พลังงาน น้ำดื่ม Gear และ Body Composition ไว้ในระบบเดียว
 
-## Version 1.1 — Legacy Feature Parity
+## Version 1.2 — Strain & Recovery Engine
 
-รุ่นนี้นำ workflow ที่ใช้งานจริงจาก `roadtopyc70` กลับมาเขียนใหม่บนสถาปัตยกรรม Modular + IndexedDB โดยไม่ย้อนกลับไปใช้ `index.html` ไฟล์เดียว
+รุ่นนี้ต่อยอดจาก Legacy Feature Parity โดยรักษาเมนูและวิธีกรอกข้อมูลเดิมทั้งหมด พร้อมเพิ่มวงจร Strain → Recovery → Readiness ที่อธิบายเหตุผลและความมั่นใจของข้อมูลได้
 
 เมนูหลัก:
 
@@ -13,6 +13,15 @@ Local-first adaptive trail running coach สำหรับใช้งานร
 3. **ฝึก** — Rehab, Strength, Running Drills และอุปกรณ์ฝึกที่บ้าน
 4. **อาหาร** — Food log, Energy balance, Nutrition guide, Race fueling และ HR Zones
 5. **บันทึก** — Motivation, Pain, Body/Weight, Sleep/RHR และ Data tools
+
+
+### Strain / Recovery ที่เพิ่มใน v1.2
+
+- **Strain 0–21:** Workout duration × RPE/HR ร่วมกับระยะ, Gain/Loss, Trail, Night Run และพฤติกรรมจาก Steps/Active Energy/Exercise Minutes
+- **Recovery 0–100:** Sleep, Resting HR, HRV, Fatigue, Stress, Soreness และ Strain 1–3 วันก่อน เทียบ baseline ส่วนตัว
+- **Readiness 0–100:** Recovery ร่วมกับ Pain Safety Gate และแนวโน้มโหลด โดย Pain มีสิทธิ์เหนือคะแนนเสมอ
+- หน้าใหม่ **Strain & Recovery** แสดงเหตุผลของคะแนน, Data Confidence, Baseline maturity และแนวโน้ม 14 วัน
+- เพิ่ม Sleep target ใน Athlete Settings
 
 ### Food workflow ที่คืนกลับมา
 

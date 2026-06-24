@@ -1,21 +1,84 @@
-# Scoring and safety logic
+# Strain, Recovery and Readiness scoring
 
-The app provides training decision support, not diagnosis or injury prediction.
+The scores are provider-neutral decision-support signals. They are not medical diagnosis, injury prediction, or a replacement for professional assessment.
 
-## Strain
+## Strain — 0 to 21
 
-Training strain combines session RPE × duration with mechanical factors such as distance, elevation gain, elevation loss, trail terrain and night running. Daily behavior load uses available steps, active energy and exercise minutes relative to personal history.
+Daily Strain combines two sources:
 
-## Recovery
+1. **Recorded exercise**
+   - Internal load: `duration × session RPE`.
+   - When RPE is missing, average HR relative to the athlete's Max HR estimates an RPE band.
+   - Mechanical modifiers: distance, elevation gain, elevation loss, trail terrain and night running.
+   - Descent has a slightly higher mechanical weight because trail descending adds eccentric braking demand.
 
-Recovery uses available sleep, sleep quality, resting HR deviation, HRV context, fatigue, stress and muscle soreness. Missing fields reduce confidence rather than being silently interpreted as normal.
+2. **Daily behavior**
+   - Steps, Active Energy and Exercise Minutes are compared with the athlete's recent median.
+   - Behavior contributes on rest days and is capped on workout days to reduce double-counting.
 
-## Readiness
+The underlying load is mapped to a 0–21 curve. The UI also keeps a normalized 0–100 value for charts only.
 
-Readiness combines recovery, recent load, behavior load and pain safety gates. A wearable-only check-in is capped at Yellow until subjective pain/safety questions are completed.
+Suggested interpretation:
+
+- `<4`: light
+- `4–7.9`: moderate
+- `8–12.9`: high
+- `13–16.9`: very high
+- `17–21`: peak load
+
+These bands describe workload, not whether the workload is automatically good or bad.
+
+## Recovery — 0 to 100
+
+Recovery compares the current day with the athlete's own baseline:
+
+- Sleep duration relative to personal sleep target
+- Sleep quality
+- Resting HR deviation
+- HRV deviation
+- Fatigue, stress and muscle soreness
+- Previous-day and recent three-day Strain
+
+RHR baseline uses recent values with a minimum of 3 days. HRV baseline requires at least 5 days and becomes more reliable toward 21 days. Missing fields reduce Data Confidence rather than being treated as normal.
+
+Suggested interpretation:
+
+- `75–100`: good recovery
+- `50–74`: moderate recovery
+- `<50`: recovery is limited
+
+## Readiness — 0 to 100
+
+Readiness combines Recovery with:
+
+- Pain Safety Gate
+- 7-day load trend
+- Subjective pain/fatigue completion
+- Available activity history
+
+Wearable-only data is capped at Yellow until the user completes pain, fatigue, stress and soreness questions.
 
 ## Safety gates
 
-Pain at 6/10 or higher, pain while walking, altered gait, swelling, illness symptoms or unusual dizziness can force a Red recommendation. Yellow may replace hard sessions with easy work or reduce duration and distance.
+The following can force or cap the recommendation regardless of HRV or sleep:
 
-Scores must remain explainable: the UI should show flags, confidence and the reason for a recommendation rather than presenting a single opaque number.
+- Pain at 6/10 or higher
+- Pain during normal walking
+- Altered gait
+- Swelling, redness or unusual heat
+- Illness symptoms
+- Unusual dizziness or chest-related symptoms
+
+Pain 3–5/10 or recurring pain creates a Yellow caution and can remove speed, downhill or long-run work.
+
+## Confidence and explainability
+
+Every score includes Data Confidence and drivers. Confidence reflects:
+
+- Objective metric coverage
+- Subjective check completion
+- RHR/HRV baseline maturity
+- Workout and behavior data availability
+- Data source such as Apple Health, import or manual entry
+
+The score detail page shows positive and negative drivers, 14-day trends and baseline maturity.

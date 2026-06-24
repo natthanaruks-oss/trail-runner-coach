@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0 — Strain & Recovery Engine
+
+- Added three visible daily scores: Strain 0–21, Recovery 0–100 and Readiness 0–100.
+- Added a provider-neutral daily Strain model combining workout load, trail mechanical load, downhill, night running and Apple Health behavior metrics.
+- Added personalized Recovery baselines for Sleep target, Resting HR and HRV with baseline maturity and Data Confidence.
+- Added previous-day and three-day Strain context to Recovery.
+- Added a detailed score page with 14-day trends, positive/negative drivers and transparent calculation notes.
+- Kept Pain Safety Gate above all wearable scores and retained the wearable-only Yellow cap until subjective checks are complete.
+- Added athlete sleep-target setting and expanded automated tests to 16.
+- Preserved every v1.1 food, training, plan, log and migration workflow.
+- Bumped PWA cache and application version to 1.2.0.
+
 ## 1.1.0 — Legacy Feature Parity
 
 - Restored the five primary workflows: Today, Plan, Train, Food and Log.

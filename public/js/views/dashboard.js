@@ -13,43 +13,51 @@ export function renderDashboard(container, state, app) {
   const week = selectWeekSummary(state, today.plan.weekSessions);
   const session = today.plan.todaySession;
   const recommendation = recommendSession(today.readiness, session);
-  const readinessScore = today.readiness?.score ?? 0;
   const readinessStatus = today.readiness?.status || 'neutral';
   const nutrition = foodTotals(state, today.dateKey);
   const nutritionPlan = nutritionTarget(state, today.dateKey);
   const water = state.waterLogs.find(item => item.date === today.dateKey)?.amountMl || 0;
   const waterTarget = dailyWaterTargetMl(state, today.dateKey);
   const readinessLabel = today.readiness
-    ? `${readinessStatus === 'green' ? 'พร้อมซ้อม' : readinessStatus === 'yellow' ? 'ลดโหลด' : 'พัก/ประเมินอาการ'}`
+    ? readinessStatus === 'green' ? 'พร้อมซ้อม' : readinessStatus === 'yellow' ? 'ลดโหลด' : 'พัก/ประเมินอาการ'
     : 'ยังไม่ได้ Check-in';
 
   container.innerHTML = `
     ${pageHeader('วันนี้', formatThaiDate(today.dateKey), today.race ? `${escapeHtml(today.race.name)} · ${escapeHtml(raceSummary(today.race))}` : 'เลือกสนามเป้าหมายเพื่อเริ่มวางแผน')}
     <section class="card hero">
-      <div class="hero-grid">
-        <div>
-          ${statusBadge(readinessStatus, readinessLabel)}
-          <h2 style="font-size:24px;margin:12px 0 6px">${escapeHtml(session?.title?.th || 'อยู่นอกช่วงแผน')}</h2>
-          <div style="color:var(--muted);font-size:12px">${escapeHtml(session?.t || 'Rest')} ${session?.km ? `· ${session.km} km · +${session.vert || 0} m` : ''}</div>
-          <div class="callout ${today.readiness?.status === 'red' ? 'danger' : today.readiness?.status === 'green' ? 'good' : ''}" style="margin-top:14px">
-            <strong>${escapeHtml(recommendation.intensity)}</strong><br>
-            ${escapeHtml(recommendation.reasons.join(' · '))}
-          </div>
-          <div class="button-row" style="margin-top:13px">
-            <button class="button primary" data-action="checkin">${today.checkin ? 'แก้ไข Check-in' : 'Check-in ก่อนซ้อม'}</button>
-            ${session ? '<button class="button secondary" data-action="record-workout">บันทึกผลจริง</button>' : ''}
-          </div>
+      <div>
+        ${statusBadge(readinessStatus, readinessLabel)}
+        <h2 style="font-size:24px;margin:12px 0 6px">${escapeHtml(session?.title?.th || 'อยู่นอกช่วงแผน')}</h2>
+        <div style="color:var(--muted);font-size:12px">${escapeHtml(session?.t || 'Rest')} ${session?.km ? `· ${session.km} km · +${session.vert || 0} m` : ''}</div>
+        <div class="callout ${today.readiness?.status === 'red' ? 'danger' : today.readiness?.status === 'green' ? 'good' : ''}" style="margin-top:14px">
+          <strong>${escapeHtml(recommendation.intensity)}</strong><br>
+          ${escapeHtml(recommendation.reasons.join(' · '))}
         </div>
-        <div class="ring" style="--value:${readinessScore};--ring-color:${ringColor(readinessStatus)}">
-          <div class="ring-content"><strong>${today.readiness ? readinessScore : '—'}</strong><small>READINESS</small></div>
+        <div class="button-row" style="margin-top:13px">
+          <button class="button primary" data-action="checkin">${today.checkin ? 'แก้ไข Check-in' : 'Check-in ก่อนซ้อม'}</button>
+          ${session ? '<button class="button secondary" data-action="record-workout">บันทึกผลจริง</button>' : ''}
         </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Strain · Recovery · Readiness</h2><a href="#/scores">ดูเหตุผลและแนวโน้ม</a></div>
+      <div class="score-ring-grid">
+        ${scoreRing({ label:'STRAIN', value:today.strain.score, max:21, normalized:today.strain.normalizedScore, color:strainColor(today.strain.score), sub:`${today.strain.classification.label} · confidence ${today.strain.confidence}%` })}
+        ${scoreRing({ label:'RECOVERY', value:today.recovery?.score, max:100, normalized:today.recovery?.score || 0, color:recoveryColor(today.recovery?.score), sub:today.recovery ? `${recoveryLabel(today.recovery.score)} · confidence ${today.recovery.confidence}%` : 'รอ Sleep / RHR / HRV' })}
+        ${scoreRing({ label:'READINESS', value:today.readiness?.score, max:100, normalized:today.readiness?.score || 0, color:ringColor(readinessStatus), sub:today.readiness ? `${readinessLabel} · confidence ${today.readiness.confidence}%` : 'กรอก Pain / Fatigue ก่อนซ้อม' })}
+      </div>
+      <div class="score-explainer">
+        <div><strong>Strain</strong><span>โหลดจาก Workout + Vertical + Downhill + Night + พฤติกรรมประจำวัน</span></div>
+        <div><strong>Recovery</strong><span>Sleep, RHR, HRV, ความล้า และโหลด 1–3 วันก่อน</span></div>
+        <div><strong>Readiness</strong><span>Recovery เทียบกับ Pain Safety Gate และแนวโน้มโหลด</span></div>
       </div>
     </section>
 
     <section class="grid three section">
       ${metricCard(countdown.race ? `ถึง ${escapeHtml(countdown.race.name)}` : 'วันแข่งขัน', countdown.race ? countdown.days : '—', countdown.race ? 'วัน' : '', countdown.race ? `${countdown.weeks} สัปดาห์ ${countdown.remainderDays} วัน` : 'ยังไม่มีสนามที่เลือก')}
       ${metricCard('สัปดาห์นี้', `${week.completionPct}%`, '', `${week.completedSessions}/${week.trainableSessions} sessions`)}
-      ${metricCard('Strain วันนี้', today.load.strainScore, '/100', `${today.load.totalLoad} load units`)}
+      ${metricCard('7-day Load', formatNumber(today.loadTrend.last7.totalLoad), '', `เทียบสัปดาห์ก่อน ${formatWeekChange(today.loadTrend.weekChangePct)}`)}
     </section>
 
     <section class="section">
@@ -70,25 +78,19 @@ export function renderDashboard(container, state, app) {
     </section>
 
     <section class="section">
-      <div class="section-head"><h2>โหลดและการฟื้นตัว</h2><a href="#/data">ดูข้อมูล</a></div>
+      <div class="section-head"><h2>ข้อมูลที่ใช้คำนวณ</h2><a href="#/data">Apple Health / Import</a></div>
       <div class="grid two">
         <article class="card flat">
-          <div class="card-title">7-day Load</div>
-          <div class="metric">${formatNumber(today.loadTrend.last7.totalLoad)}</div>
-          <div class="submetric">เทียบ 7 วันก่อน ${formatWeekChange(today.loadTrend.weekChangePct)}</div>
-          <div class="progress" style="margin-top:12px"><span style="width:${Math.min(100, today.loadTrend.last7.totalLoad / 25)}%;background:${loadColor(today.loadTrend.warning.level)}"></span></div>
+          <div class="card-title">Behavior load วันนี้</div>
+          <div class="metric">${today.strain.behaviorLoad?.score ?? '—'}${today.strain.behaviorLoad?.score != null ? '<small>/100</small>' : ''}</div>
+          <div class="submetric">${behaviorText(today.strain.behaviorLoad)}</div>
+          <div class="progress" style="margin-top:12px"><span style="width:${today.strain.behaviorLoad?.score ?? 0}%;background:var(--amber)"></span></div>
         </article>
         <article class="card flat">
-          <div class="card-title">Behavior load เมื่อวาน</div>
-          <div class="metric">${today.readiness?.behaviorLoad?.score ?? '—'}${today.readiness?.behaviorLoad?.score != null ? '<small>/100</small>' : ''}</div>
-          <div class="submetric">${behaviorText(today.readiness?.behaviorLoad)}</div>
-          <div class="progress" style="margin-top:12px"><span style="width:${today.readiness?.behaviorLoad?.score ?? 0}%;background:var(--amber)"></span></div>
-        </article>
-        <article class="card flat">
-          <div class="card-title">Data confidence</div>
-          <div class="metric">${today.readiness?.confidence ?? 0}<small>%</small></div>
-          <div class="submetric">${confidenceText(today.readiness?.confidence ?? 0)}</div>
-          <div class="progress" style="margin-top:12px"><span style="width:${today.readiness?.confidence ?? 0}%;background:var(--blue)"></span></div>
+          <div class="card-title">Baseline</div>
+          <div class="metric">${today.recovery?.baseline?.hrvDays ?? 0}<small>วัน HRV</small></div>
+          <div class="submetric">RHR ${today.recovery?.baseline?.restingHrDays ?? 0} วัน · Sleep ${today.recovery?.baseline?.sleepDays ?? 0} วัน</div>
+          <div class="progress" style="margin-top:12px"><span style="width:${Math.min(100, ((today.recovery?.baseline?.hrvDays || 0) / 21) * 100)}%;background:var(--blue)"></span></div>
         </article>
       </div>
     </section>
@@ -117,6 +119,11 @@ export function renderDashboard(container, state, app) {
   }));
 }
 
+function scoreRing({ label, value, max, normalized, color, sub }) {
+  const display = value == null ? '—' : formatNumber(value, max === 21 ? 1 : 0);
+  return `<article class="score-ring-card card flat"><div class="ring small" style="--value:${Math.max(0, normalized || 0)};--ring-color:${color}"><div class="ring-content"><strong>${display}</strong><small>/${max}</small></div></div><div class="score-ring-text"><strong>${label}</strong><span>${escapeHtml(sub)}</span></div></article>`;
+}
+
 function renderPainAlert(today) {
   const pain = today.readiness?.pain;
   if (!pain || (!pain.caution && !pain.hardStop)) return '';
@@ -133,8 +140,14 @@ function renderRecentActivities(activities) {
 function ringColor(status) {
   return status === 'green' ? 'var(--green)' : status === 'yellow' ? 'var(--amber)' : status === 'red' ? 'var(--red)' : 'var(--blue)';
 }
-function loadColor(level) {
-  return level === 'high' ? 'var(--red)' : level === 'moderate' ? 'var(--amber)' : 'var(--mint)';
+function strainColor(score) {
+  return score >= 17 ? 'var(--red)' : score >= 13 ? 'var(--amber)' : score >= 8 ? 'var(--blue)' : 'var(--mint)';
+}
+function recoveryColor(score) {
+  return score == null ? 'var(--blue)' : score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)';
+}
+function recoveryLabel(score) {
+  return score >= 75 ? 'ฟื้นตัวดี' : score >= 50 ? 'ฟื้นตัวปานกลาง' : 'ฟื้นตัวยังไม่พอ';
 }
 function formatWeekChange(value) {
   if (value == null) return 'ยังไม่มีประวัติเทียบ';
@@ -142,12 +155,7 @@ function formatWeekChange(value) {
 }
 function behaviorText(load) {
   if (!load || load.score == null) return 'รอ Steps, Active Energy และ Exercise จาก Apple Health';
-  if (load.score >= 85) return 'ภาระการเคลื่อนไหวสูงกว่าปกติ';
-  if (load.score >= 65) return 'ภาระการเคลื่อนไหวปานกลาง';
-  return 'ภาระกิจกรรมประจำวันค่อนข้างเบา';
-}
-function confidenceText(value) {
-  if (value >= 80) return 'ข้อมูลค่อนข้างครบ';
-  if (value >= 55) return 'ใช้ตัดสินใจได้บางส่วน';
-  return 'ควรเพิ่ม Sleep, RHR/HRV และกิจกรรมจริง';
+  if (load.score >= 85) return `สูงกว่าปกติ · เพิ่ม Strain ${load.strainContribution21 || 0}`;
+  if (load.score >= 65) return `ปานกลาง · เพิ่ม Strain ${load.strainContribution21 || 0}`;
+  return `ค่อนข้างเบา · เพิ่ม Strain ${load.strainContribution21 || 0}`;
 }

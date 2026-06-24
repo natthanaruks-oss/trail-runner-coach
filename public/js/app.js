@@ -19,6 +19,7 @@ import { renderRaces } from './views/races.js';
 import { renderTraining } from './views/training.js';
 import { renderFuel } from './views/fuel.js';
 import { renderLog } from './views/log.js';
+import { renderScores } from './views/scores.js';
 import { installReceiver as installAppleHealthReceiver } from './adapters/apple-health.js';
 import { modalTemplate, fieldNumber, escapeHtml } from './views/components.js';
 
@@ -43,7 +44,8 @@ const routes = {
   races: renderRaces,
   train: renderTraining,
   fuel: renderFuel,
-  log: renderLog
+  log: renderLog,
+  scores: renderScores
 };
 
 const app = {
@@ -81,7 +83,7 @@ function currentRoute() {
 
 function render() {
   const route = currentRoute();
-  const activeNav = route === 'rehab' ? 'train' : route === 'nutrition' ? 'fuel' : ['pain','body','data','settings','races','gear','motivation','more','checkin'].includes(route) ? 'log' : route;
+  const activeNav = route === 'rehab' ? 'train' : route === 'nutrition' ? 'fuel' : ['pain','body','data','settings','races','gear','motivation','more','checkin'].includes(route) ? 'log' : route === 'scores' ? 'today' : route;
   document.querySelectorAll('[data-route]').forEach(link => link.classList.toggle('active', link.dataset.route === activeNav));
   routes[route](view, store.getState(), app);
   view.focus({ preventScroll: true });

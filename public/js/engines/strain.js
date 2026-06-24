@@ -3,45 +3,67 @@ import { addDays, dateRange, localDateKey } from '../core/date.js';
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const sum = values => values.reduce((total, value) => total + (Number(value) || 0), 0);
 
-export function calculateSessionLoad(activity) {
+/**
+ * Session load is intentionally transparent and provider-neutral.
+ * - Internal load: session RPE x duration, with HR-derived RPE as a fallback.
+ * - Mechanical load: distance, climbing, descent, trail and night modifiers.
+ * - User-facing Strain is scaled to 0-21; normalizedScore remains 0-100 for charts.
+ */
+export function calculateSessionLoad(activity = {}) {
   const duration = Math.max(0, Number(activity.durationMin) || 0);
-  const rpe = clamp(Number(activity.rpe) || inferRpe(activity), 1, 10);
+  const suppliedRpe = finiteOrNull(activity.rpe);
+  const hrDerivedRpe = inferRpe(activity);
+  const rpe = clamp(suppliedRpe ?? hrDerivedRpe ?? 4, 1, 10);
+  const method = suppliedRpe != null ? 'session_rpe' : hrDerivedRpe != null ? 'heart_rate' : 'default_rpe';
   const gain = Math.max(0, Number(activity.elevationGainM) || 0);
   const loss = Math.max(0, Number(activity.elevationLossM) || 0);
   const distance = Math.max(0, Number(activity.distanceKm) || 0);
   const nightFactor = activity.isNight ? 1.08 : 1;
-  const terrainFactor = activity.terrain === 'trail' ? 1.08 : 1;
+  const terrainFactor = activity.terrain === 'trail' ? 1.10 : activity.terrain === 'strength' ? 0.88 : 1;
 
-  // Session-RPE is the primary internal-load measure. Vertical and descent are
-  // separate mechanical modifiers, not substitutes for physiological load.
   const internalLoad = duration * rpe;
   const climbUnits = gain / 100;
-  const descentUnits = loss / 120;
+  // Descent is weighted slightly higher because eccentric braking matters for trail runners.
+  const descentUnits = loss / 95;
   const distanceUnits = distance;
   const mechanicalLoad = (distanceUnits + climbUnits + descentUnits) * terrainFactor * nightFactor;
-  const totalLoad = internalLoad * (1 + Math.min(0.25, mechanicalLoad / 180));
+  const mechanicalModifier = Math.min(0.32, mechanicalLoad / 150);
+  const totalLoad = internalLoad * (1 + mechanicalModifier);
+  const strainScore21 = loadToStrain21(totalLoad);
 
   return {
     internalLoad: Math.round(internalLoad),
+    cardiovascularLoad: Math.round(duration * rpe),
     mechanicalLoad: Number(mechanicalLoad.toFixed(1)),
+    mechanicalModifier: Number(mechanicalModifier.toFixed(3)),
     totalLoad: Math.round(totalLoad),
-    strainScore: Math.round(100 * (1 - Math.exp(-totalLoad / 650)))
+    strainScore21,
+    strainScore: Math.round((strainScore21 / 21) * 100),
+    rpeUsed: Number(rpe.toFixed(1)),
+    method,
+    drivers: [
+      duration > 0 ? { key: 'duration', value: duration, unit: 'min' } : null,
+      distance > 0 ? { key: 'distance', value: distance, unit: 'km' } : null,
+      gain > 0 ? { key: 'elevationGain', value: gain, unit: 'm' } : null,
+      loss > 0 ? { key: 'elevationLoss', value: loss, unit: 'm' } : null,
+      activity.isNight ? { key: 'night', value: true } : null,
+      activity.terrain === 'trail' ? { key: 'trail', value: true } : null
+    ].filter(Boolean)
   };
 }
 
 function inferRpe(activity) {
   const avgHr = Number(activity.avgHr) || 0;
   const maxHr = Number(activity.maxHrReference) || Number(activity.maxHr) || 0;
-  if (avgHr > 0 && maxHr > 0) {
-    const ratio = avgHr / maxHr;
-    if (ratio >= 0.9) return 9;
-    if (ratio >= 0.84) return 8;
-    if (ratio >= 0.78) return 7;
-    if (ratio >= 0.72) return 6;
-    if (ratio >= 0.65) return 4;
-    return 3;
-  }
-  return 4;
+  if (!(avgHr > 0 && maxHr > 0)) return null;
+  const ratio = avgHr / maxHr;
+  if (ratio >= 0.92) return 9.5;
+  if (ratio >= 0.87) return 8.5;
+  if (ratio >= 0.82) return 7.5;
+  if (ratio >= 0.76) return 6.5;
+  if (ratio >= 0.70) return 5.5;
+  if (ratio >= 0.63) return 4;
+  return 3;
 }
 
 export function activitiesForDate(activities, dateKey) {
@@ -51,13 +73,48 @@ export function activitiesForDate(activities, dateKey) {
 export function dailyLoad(activities, dateKey) {
   const sessions = activitiesForDate(activities, dateKey);
   const loads = sessions.map(calculateSessionLoad);
+  const totalLoad = sum(loads.map(item => item.totalLoad));
+  const strainScore21 = loadToStrain21(totalLoad);
   return {
     date: dateKey,
     activities: sessions.length,
-    totalLoad: sum(loads.map(item => item.totalLoad)),
+    sessions: loads,
+    totalLoad,
     internalLoad: sum(loads.map(item => item.internalLoad)),
+    cardiovascularLoad: sum(loads.map(item => item.cardiovascularLoad)),
     mechanicalLoad: Number(sum(loads.map(item => item.mechanicalLoad)).toFixed(1)),
-    strainScore: Math.round(100 * (1 - Math.exp(-sum(loads.map(item => item.totalLoad)) / 650)))
+    strainScore21,
+    strainScore: Math.round((strainScore21 / 21) * 100),
+    classification: classifyStrain21(strainScore21)
+  };
+}
+
+/**
+ * Combines recorded exercise with everyday behavior. Behavior is deliberately capped
+ * on workout days to reduce double-counting steps and energy already generated by a workout.
+ */
+export function calculateDailyStrain(activities, dateKey = localDateKey(), checkin = null, checkinHistory = []) {
+  const activityLoad = dailyLoad(activities, dateKey);
+  const behaviorLoad = calculateBehaviorLoad(checkin, checkinHistory);
+  const rawBehaviorContribution = behaviorLoad.strainContribution21 || 0;
+  const behaviorContribution21 = activityLoad.activities > 0
+    ? Math.min(2.5, rawBehaviorContribution * 0.4)
+    : rawBehaviorContribution;
+  const strainScore21 = Number(clamp(activityLoad.strainScore21 + behaviorContribution21, 0, 21).toFixed(1));
+  const totalLoad = Math.round(activityLoad.totalLoad + (behaviorLoad.loadUnits || 0) * (activityLoad.activities > 0 ? 0.4 : 1));
+
+  return {
+    date: dateKey,
+    score: strainScore21,
+    strainScore21,
+    normalizedScore: Math.round((strainScore21 / 21) * 100),
+    classification: classifyStrain21(strainScore21),
+    activityLoad,
+    behaviorLoad,
+    behaviorContribution21: Number(behaviorContribution21.toFixed(1)),
+    totalLoad,
+    confidence: calculateStrainConfidence(activityLoad, behaviorLoad),
+    drivers: strainDrivers(activityLoad, behaviorLoad, behaviorContribution21)
   };
 }
 
@@ -72,6 +129,22 @@ export function loadWindow(activities, endDateKey = localDateKey(), days = 7) {
     totalMechanicalLoad: Number(sum(series.map(day => day.mechanicalLoad)).toFixed(1)),
     activeDays: series.filter(day => day.totalLoad > 0).length,
     averageDailyLoad: Math.round(sum(series.map(day => day.totalLoad)) / days)
+  };
+}
+
+export function strainWindow(activities, checkins = [], endDateKey = localDateKey(), days = 7) {
+  const series = dateRange(endDateKey, days).map(date => {
+    const checkin = checkins.find(item => item.date === date) || null;
+    return calculateDailyStrain(activities, date, checkin, checkins.filter(item => item.date < date));
+  });
+  return {
+    days,
+    startDate: series[0]?.date,
+    endDate: endDateKey,
+    series,
+    averageScore: Number((sum(series.map(day => day.score)) / Math.max(1, days)).toFixed(1)),
+    peakScore: Number(Math.max(0, ...series.map(day => day.score)).toFixed(1)),
+    totalLoad: sum(series.map(day => day.totalLoad))
   };
 }
 
@@ -109,7 +182,7 @@ function classifyTrend(trendRatio, weekChangePct) {
 }
 
 export function calculateBehaviorLoad(checkin, history = []) {
-  if (!checkin) return { score: null, penalty: 0, confidence: 0, components: [], flags: ['missing_behavior_data'] };
+  if (!checkin) return { score: null, penalty: 0, confidence: 0, components: [], flags: ['missing_behavior_data'], strainContribution21: 0, loadUnits: 0 };
   const prior = history
     .filter(item => item.date && item.date < checkin.date)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)))
@@ -121,16 +194,20 @@ export function calculateBehaviorLoad(checkin, history = []) {
   addBehaviorComponent('activeEnergyKcal', checkin.activeEnergyKcal, median(prior.map(item => Number(item.activeEnergyKcal)).filter(value => value > 0)), 650, 0.35, components, flags);
   addBehaviorComponent('exerciseMinutes', checkin.exerciseMinutes, median(prior.map(item => Number(item.exerciseMinutes)).filter(value => value > 0)), 45, 0.20, components, flags);
 
-  if (!components.length) return { score: null, penalty: 0, confidence: 0, components, flags: ['missing_behavior_data'] };
+  if (!components.length) return { score: null, penalty: 0, confidence: 0, components, flags: ['missing_behavior_data'], strainContribution21: 0, loadUnits: 0 };
   const totalWeight = components.reduce((total, item) => total + item.weight, 0);
   const score = components.reduce((total, item) => total + item.score * item.weight, 0) / totalWeight;
-  const penalty = clamp((score - 55) / 5, 0, 10);
+  const strainContribution21 = clamp((score - 30) / 12, 0, 6);
+  const loadUnits = strain21ToLoad(strainContribution21);
+  const penalty = clamp((score - 70) / 7, 0, 6);
   return {
     score: Math.round(score),
     penalty: Math.round(penalty),
     confidence: Math.round(clamp((components.length / 3) * 100, 20, 100)),
     components,
-    flags: [...new Set(flags)]
+    flags: [...new Set(flags)],
+    strainContribution21: Number(strainContribution21.toFixed(1)),
+    loadUnits: Math.round(loadUnits)
   };
 }
 
@@ -139,9 +216,45 @@ function addBehaviorComponent(key, rawValue, baseline, defaultBaseline, weight, 
   if (!Number.isFinite(value) || value < 0) return;
   const reference = baseline || defaultBaseline;
   const ratio = reference > 0 ? value / reference : 1;
-  const score = clamp(35 + ratio * 35, 20, 100);
-  components.push({ key, value, baseline: reference, ratio: Number(ratio.toFixed(2)), score, weight });
+  const score = clamp(28 + ratio * 42, 15, 100);
+  components.push({ key, value, baseline: reference, ratio: Number(ratio.toFixed(2)), score: Math.round(score), weight });
   if (ratio >= 1.5 && value >= defaultBaseline) flags.push(`high_${key}`);
+}
+
+export function classifyStrain21(score) {
+  if (score < 4) return { level: 'low', label: 'เบา' };
+  if (score < 8) return { level: 'moderate', label: 'ปานกลาง' };
+  if (score < 13) return { level: 'high', label: 'สูง' };
+  if (score < 17) return { level: 'very_high', label: 'สูงมาก' };
+  return { level: 'peak', label: 'หนักมาก' };
+}
+
+function loadToStrain21(load) {
+  if (!(load > 0)) return 0;
+  return Number((21 * (1 - Math.exp(-load / 520))).toFixed(1));
+}
+
+function strain21ToLoad(score) {
+  const bounded = clamp(Number(score) || 0, 0, 20.9);
+  if (bounded <= 0) return 0;
+  return -520 * Math.log(1 - bounded / 21);
+}
+
+function calculateStrainConfidence(activityLoad, behaviorLoad) {
+  const activityConfidence = activityLoad.activities > 0
+    ? clamp(55 + activityLoad.sessions.filter(item => item.method !== 'default_rpe').length * 15, 55, 95)
+    : 0;
+  const behaviorConfidence = behaviorLoad.confidence || 0;
+  if (activityConfidence && behaviorConfidence) return Math.round(activityConfidence * 0.75 + behaviorConfidence * 0.25);
+  return Math.round(Math.max(activityConfidence, behaviorConfidence));
+}
+
+function strainDrivers(activityLoad, behaviorLoad, behaviorContribution21) {
+  const drivers = [];
+  if (activityLoad.activities) drivers.push({ key: 'recordedActivities', direction: 'load', value: activityLoad.activities, contribution: activityLoad.strainScore21 });
+  if (activityLoad.mechanicalLoad > 0) drivers.push({ key: 'mechanicalLoad', direction: 'load', value: activityLoad.mechanicalLoad });
+  if (behaviorContribution21 > 0) drivers.push({ key: 'dailyBehavior', direction: 'load', value: behaviorLoad.score, contribution: Number(behaviorContribution21.toFixed(1)) });
+  return drivers;
 }
 
 function median(values) {
@@ -149,4 +262,10 @@ function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function finiteOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }

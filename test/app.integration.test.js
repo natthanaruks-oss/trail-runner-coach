@@ -38,6 +38,7 @@ test('application initializes the multi-race IndexedDB model and renders primary
 
   for (const [route, expected] of [
     ['plan', 'แผนซ้อม'],
+    ['scores', 'Strain & Recovery'],
     ['checkin', 'Daily Readiness Check'],
     ['rehab', 'Rehab & Prehab'],
     ['pain', 'Niggle / Pain Log'],

@@ -1,5 +1,5 @@
 export const APP_NAME = 'Trail Runner Coach';
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 export const DB_NAME = 'trail_runner_coach';
 export const DB_VERSION = 4;
 export const LEGACY_STORAGE_KEYS = Object.freeze(['rtc70_v2', 'trail_runner_coach_v1']);
@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
     weightKg: null,
     maxHr: null,
     restingHrBaseline: null,
+    sleepTargetHours: 7.5,
     flatFeet: false,
     wideForefoot: false
   },

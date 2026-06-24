@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateBehaviorLoad, calculateSessionLoad, calculateLoadTrend } from '../public/js/engines/strain.js';
+import { calculateBehaviorLoad, calculateDailyStrain, calculateSessionLoad, calculateLoadTrend } from '../public/js/engines/strain.js';
 import { calculateRecovery } from '../public/js/engines/recovery.js';
 import { calculateReadiness } from '../public/js/engines/readiness.js';
 import { recommendSession } from '../public/js/engines/recommendation.js';
@@ -19,6 +19,23 @@ test('trail elevation, descent and night work increase mechanical load', () => {
   assert.ok(trail.totalLoad > road.totalLoad);
 });
 
+
+
+test('daily strain uses a 0-21 scale and includes behavior-only load', () => {
+  const history = Array.from({ length: 10 }, (_, index) => ({ date: `2026-06-${String(index + 1).padStart(2, '0')}`, steps: 8000, activeEnergyKcal: 500, exerciseMinutes: 30 }));
+  const result = calculateDailyStrain([], '2026-06-20', { date: '2026-06-20', steps: 18000, activeEnergyKcal: 1000, exerciseMinutes: 100 }, history);
+  assert.ok(result.score > 0);
+  assert.ok(result.score <= 21);
+  assert.ok(result.behaviorContribution21 > 0);
+});
+
+test('recent high strain lowers recovery compared with an otherwise identical easy-load day', () => {
+  const checkin = { date: '2026-06-23', sleepHours: 7.5, sleepQuality: 4, restingHr: 55, fatigue: 2, stress: 2, muscleSoreness: 2, source: 'manual' };
+  const easy = calculateRecovery(checkin, settings, [], { previousDayStrain: { score: 4 }, recentStrainAverage: 5 });
+  const hard = calculateRecovery(checkin, settings, [], { previousDayStrain: { score: 18 }, recentStrainAverage: 15 });
+  assert.ok(easy.score > hard.score);
+  assert.ok(hard.flags.includes('high_recent_strain'));
+});
 test('good recovery is scored higher than poor recovery', () => {
   const good = calculateRecovery({ sleepHours: 8, sleepQuality: 5, restingHr: 54, fatigue: 1, stress: 2, muscleSoreness: 1, source: 'manual' }, settings, []);
   const poor = calculateRecovery({ sleepHours: 4.5, sleepQuality: 1, restingHr: 65, fatigue: 5, stress: 5, muscleSoreness: 5, source: 'manual' }, settings, []);
