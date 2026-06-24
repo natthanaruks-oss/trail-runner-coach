@@ -1,12 +1,12 @@
 import { LEGACY_STORAGE_KEYS, SOURCE_TYPES, STORES } from '../core/constants.js';
 import { createId } from '../core/id.js';
-import { nowIso } from '../core/date.js';
+import { addDays, nowIso } from '../core/date.js';
 import { bulkPut, get, put } from '../core/db.js';
 import { flattenPlan } from '../core/plan.js';
 
 export function isLegacyBackup(value) {
   return Boolean(value && typeof value === 'object' && (
-    value.done || value.actual || value.readiness || value.niggles || value.why
+    value.done || value.actual || value.readiness || value.niggles || value.why || value.food || value.sleep || value.water
   ) && !value.stores);
 }
 
@@ -46,6 +46,14 @@ export async function importLegacyBackup(legacy, settings, options = {}) {
       ...settings.profile,
       motivation: legacy.why || settings.profile?.motivation || ''
     },
+    preferences: {
+      ...settings.preferences,
+      nonExerciseActivityFactor: Number(legacy.activityFactor) || settings.preferences?.nonExerciseActivityFactor || 1.2
+    },
+    nutrition: {
+      ...settings.nutrition,
+      bmrKcal: Number(legacy.bmr) || settings.nutrition?.bmrKcal || null
+    },
     updatedAt: nowIso()
   };
   await put(STORES.SETTINGS, migratedSettings);
@@ -65,10 +73,11 @@ export async function importLegacyBackup(legacy, settings, options = {}) {
     await put(STORES.PLANS, plan);
   }
 
-  const imported = { checkins: 0, painLogs: 0, workouts: 0, activities: 0, source: options.source || 'file' };
-  const checkins = Object.entries(legacy.readiness || {}).map(([date, item]) => {
+  const imported = { checkins: 0, painLogs: 0, workouts: 0, activities: 0, foodLogs: 0, customFoods: 0, waterLogs: 0, bodyComposition: 0, gear: 0, source: options.source || 'file' };
+  const checkinMap = new Map();
+  for (const [date, item] of Object.entries(legacy.readiness || {})) {
     const total = Number(item.tot) || 3;
-    return {
+    checkinMap.set(date, {
       date,
       source: SOURCE_TYPES.LEGACY,
       sleepQuality: total >= 5 ? 4 : total >= 3 ? 3 : 2,
@@ -79,8 +88,20 @@ export async function importLegacyBackup(legacy, settings, options = {}) {
       note: 'Migrated from an earlier Trail Runner Coach / RTC70 readiness format.',
       createdAt: nowIso(),
       updatedAt: nowIso()
-    };
-  });
+    });
+  }
+  for (const [date, item] of Object.entries(legacy.sleep || {})) {
+    const row = checkinMap.get(date) || { date, source: SOURCE_TYPES.LEGACY, createdAt: nowIso(), updatedAt: nowIso() };
+    row.sleepHours = numberOrNull(item?.h ?? item?.hours);
+    row.sleepQuality = numberOrNull(item?.q ?? item?.quality) || row.sleepQuality;
+    checkinMap.set(date, row);
+  }
+  for (const [date, value] of Object.entries(legacy.rhr || {})) {
+    const row = checkinMap.get(date) || { date, source: SOURCE_TYPES.LEGACY, createdAt: nowIso(), updatedAt: nowIso() };
+    row.restingHr = numberOrNull(value);
+    checkinMap.set(date, row);
+  }
+  const checkins = [...checkinMap.values()];
   await bulkPut(STORES.CHECKINS, checkins);
   imported.checkins = checkins.length;
 
@@ -143,6 +164,71 @@ export async function importLegacyBackup(legacy, settings, options = {}) {
   await bulkPut(STORES.ACTIVITIES, activities);
   imported.workouts = workouts.length;
   imported.activities = activities.length;
+
+  const customFoods = (legacy.customFoods || []).map((item, index) => ({
+    id: String(item.id || `legacy-custom-${index + 1}`),
+    category: item.cat || 'custom',
+    nameTh: item.n?.th || item.name || `Legacy food ${index + 1}`,
+    nameEn: item.n?.en || item.n?.th || item.name || `Legacy food ${index + 1}`,
+    serving: '1 หน่วยบริโภคเดิม',
+    kcal: Number(item.kcal) || 0,
+    proteinG: Number(item.p) || 0,
+    carbG: Number(item.c) || 0,
+    fatG: fatFromLegacy(item),
+    dataQuality: 'user_entered',
+    source: SOURCE_TYPES.LEGACY,
+    createdAt: nowIso(), updatedAt: nowIso()
+  }));
+  await bulkPut(STORES.CUSTOM_FOODS, customFoods);
+  imported.customFoods = customFoods.length;
+
+  const foodLogs = [];
+  for (const [date, items] of Object.entries(legacy.food || {})) {
+    for (const [index, item] of (items || []).entries()) {
+      const quantity = Number(item.qty) || 1;
+      const nameTh = item.n?.th || item.name || 'Legacy food';
+      foodLogs.push({
+        id: `legacy-food-log-${date}-${index}`,
+        date,
+        foodId: item.id || `legacy:${nameTh}`,
+        category: item.cat || 'custom',
+        nameTh,
+        nameEn: item.n?.en || nameTh,
+        serving: '1 หน่วยบริโภคเดิม', quantity,
+        baseKcal: (Number(item.kcal) || 0) / quantity,
+        baseProteinG: (Number(item.p) || 0) / quantity,
+        baseCarbG: (Number(item.c) || 0) / quantity,
+        baseFatG: fatFromLegacy(item) / quantity,
+        kcal: Number(item.kcal) || 0,
+        proteinG: Number(item.p) || 0,
+        carbG: Number(item.c) || 0,
+        fatG: fatFromLegacy(item),
+        dataQuality: 'estimated', source: SOURCE_TYPES.LEGACY,
+        createdAt: `${date}T12:00:${String(index).padStart(2, '0')}`, updatedAt: nowIso()
+      });
+    }
+  }
+  await bulkPut(STORES.FOOD_LOGS, foodLogs);
+  imported.foodLogs = foodLogs.length;
+
+  const waterLogs = Object.entries(legacy.water || {}).map(([date, amountMl]) => ({ date, amountMl: Number(amountMl) || 0, source: SOURCE_TYPES.LEGACY, updatedAt: nowIso() }));
+  await bulkPut(STORES.WATER_LOGS, waterLogs);
+  imported.waterLogs = waterLogs.length;
+
+  const bodyComposition = [];
+  if (Number(legacy.startWeight) > 0) bodyComposition.push({ id: 'legacy-start-weight', date: legacy.startDate || new Date().toISOString().slice(0,10), weightKg: Number(legacy.startWeight), source: SOURCE_TYPES.LEGACY, createdAt: nowIso(), updatedAt: nowIso() });
+  for (const [week, value] of Object.entries(legacy.weights || {})) {
+    if (!(Number(value) > 0)) continue;
+    const date = addDays(legacy.startDate || new Date().toISOString().slice(0,10), (Number(week) - 1) * 7);
+    bodyComposition.push({ id: `legacy-weight-week-${week}`, date, weightKg: Number(value), source: SOURCE_TYPES.LEGACY, createdAt: nowIso(), updatedAt: nowIso() });
+  }
+  await bulkPut(STORES.BODY_COMPOSITION, bodyComposition);
+  imported.bodyComposition = bodyComposition.length;
+
+  const equipmentMap = ['resistance-band','adjustable-dumbbell','step-box','yoga-mat','foam-roller','massage-ball'];
+  const gear = equipmentMap.filter((id,index)=>legacy.gear?.[`eq${index}`]).map(id=>({ id, context:'home_training', owned:true, source:SOURCE_TYPES.LEGACY, updatedAt:nowIso() }));
+  await bulkPut(STORES.GEAR, gear);
+  imported.gear = gear.length;
   return imported;
 }
 
@@ -155,3 +241,5 @@ function mapArea(value = '') {
 }
 function numberOrNull(value) { const number = Number(value); return Number.isFinite(number) ? number : null; }
 function estimateDuration(distanceKm, type) { const distance = Number(distanceKm) || 0; if (!distance) return type === 'Strength' ? 45 : 30; return Math.round(distance * (/Long|B2B|Hill|Night/.test(type) ? 11 : 8)); }
+
+function fatFromLegacy(item) { if (item?.f != null && item.f !== '') return Number(item.f) || 0; return Math.max(0, Math.round(((Number(item?.kcal)||0) - 4*(Number(item?.p)||0) - 4*(Number(item?.c)||0)) / 9 * 10) / 10); }

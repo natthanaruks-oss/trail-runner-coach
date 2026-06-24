@@ -1,45 +1,41 @@
-# Build Report — Trail Runner Coach 1.0.1
+# Build Report — Trail Runner Coach 1.1.0
 
-Build date: 23 June 2026
-
-## Deployment-name update
-
-- Cloudflare Worker/project name: `trail-runner-coaches`.
-- GitHub repository and npm package remain `trail-runner-coach`.
-- Product display name remains **Trail Runner Coach**.
-- IndexedDB and local application identifiers are unchanged, preventing unnecessary local-data migration.
+Build date: 24 June 2026
 
 ## Scope completed
 
-- Product, repository, PWA, Cloudflare and iOS naming changed to Trail Runner Coach.
-- RTC 70 moved from application identity to an initial `RaceProfile` seed.
-- Added IndexedDB stores for `raceProfiles` and `trainingPlans`.
-- Added active race/plan selection and race CRUD UI.
-- New race profiles can clone the bundled 20-week plan template; Race Day date, distance and elevation are injected from the selected race.
-- Session identifiers are plan-scoped to avoid collisions across multiple race plans.
-- Apple Health bridge renamed to `trailRunnerHealthKit` and `window.TrailRunnerCoachHealth`.
-- iOS companion renamed and restricted to the configured HTTPS host.
-- Backup, service-worker cache, package, Worker scaffold and documentation renamed.
-- Legacy RTC backup and InBody import compatibility retained.
-- Personal InBody and Apple Health data are not included in the repository package.
+- Rebuilt the useful `roadtopyc70` workflows on the current modular and IndexedDB foundation.
+- Kept multi-race planning, readiness/strain/recovery engines and Apple Health architecture.
+- Restored the five primary workflows: Today, Plan, Train, Food and Log.
+- Added 449 searchable legacy food records with category, recent-food and portion workflows.
+- Added daily food CRUD, custom food CRUD, catalog edit/hide/reset through non-destructive user overrides, water tracking and complete-day flags.
+- Added energy-balance trends for 7/14/30 days with incomplete-day protection.
+- Restored Rehab, Strength, Running Drills, home equipment, Motivation, Pain, Weight/Body and Sleep/RHR workflows.
+- Expanded old-backup migration for food, custom foods, water, sleep, resting HR, pain, body weight and equipment.
+- Full JSON backup now includes all version-4 IndexedDB stores.
+- No personal InBody, Apple Health or activity data is included in the repository package.
 
 ## Verification performed
 
-- Repository verification script: passed.
-- Node unit and browser integration tests: 12/12 passed.
-- Multi-race creation through the browser UI: passed in integration test.
-- Red pain safety gate: passed.
-- Apple Health payload normalization: passed.
-- Current and legacy InBody schemas: passed.
-- Cloudflare Wrangler deploy dry-run: passed.
-- Swift source parse: passed.
-- iOS Info.plist validation: passed.
-- iOS HealthKit entitlement plist validation: passed.
-- npm audit after install: 0 vulnerabilities reported.
+- Repository verification: passed; 449 bundled food records detected.
+- JavaScript syntax and module loading: passed.
+- Automated tests: **14/14 passed**.
+- Browser integration: primary routes, multi-race creation, food custom-entry workflow, catalog override, hide and restore: passed.
+- Nutrition totals and complete-day energy balance: passed.
+- Legacy backup migration for food, water, sleep, RHR, pain, body and equipment: passed.
+- Pain ≥6 readiness safety gate: passed.
+- Apple Health normalization and current/legacy InBody schema tests: passed.
+- Cloudflare Wrangler 4.103.0 deploy dry-run: passed; 56 public assets read.
+- Fresh `npm ci` from package-lock without an existing `node_modules`: passed.
+- npm audit: **0 vulnerabilities**.
 
-## Deployment boundaries
+## Deployment configuration
 
-- The Cloudflare web app is deploy-ready.
-- Apple Health live access still requires macOS, Xcode, a unique bundle identifier, an Apple Development Team and a physical iPhone.
-- Garmin and Suunto remain optional future integrations and require provider credentials plus a secure Worker/OAuth implementation.
-- The 20-week template is a starting baseline, not yet a fully generated plan for every race distance and athlete history.
+- Node: 22.16.0
+- Cloudflare Worker: `trail-runner-coaches`
+- Static assets: `./public`
+- SPA fallback: enabled
+- Package/application version: 1.1.0
+- IndexedDB schema: version 4
+
+For the current Cloudflare npm installer issue, keep `SKIP_DEPENDENCY_INSTALL=true`, leave Build command empty (or use `echo "No build step"`) and use `pnpm dlx wrangler@4.103.0 deploy` as Deploy command.

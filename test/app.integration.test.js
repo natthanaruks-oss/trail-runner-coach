@@ -46,7 +46,10 @@ test('application initializes the multi-race IndexedDB model and renders primary
     ['data', 'ข้อมูล & Wearables'],
     ['body', 'Body & InBody'],
     ['races', 'สนามเป้าหมาย'],
-    ['settings', 'ตั้งค่า']
+    ['settings', 'ตั้งค่า'],
+    ['train', 'ฝึก'],
+    ['fuel', 'อาหาร'],
+    ['log', 'บันทึก']
   ]) {
     dom.window.location.hash = `#/${route}`;
     dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
@@ -70,6 +73,52 @@ test('application initializes the multi-race IndexedDB model and renders primary
   dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
   await waitFor(() => dom.window.document.querySelector('h1')?.textContent.includes('แผนซ้อม'));
   assert.ok(dom.window.document.body.textContent.includes('Future 50K'));
+
+  dom.window.location.hash = '#/fuel';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.querySelector('[data-action="add-food"]'));
+  dom.window.document.querySelector('[data-action="add-food"]').click();
+  await waitFor(() => dom.window.document.querySelector('[data-food-category="custom"]'));
+  dom.window.document.querySelector('[data-food-category="custom"]').click();
+  await waitFor(() => dom.window.document.querySelector('#custom-food-form'));
+  const foodForm = dom.window.document.querySelector('#custom-food-form');
+  foodForm.querySelector('[name="nameTh"]').value = 'อาหารทดสอบ';
+  foodForm.querySelector('[name="kcal"]').value = '350';
+  foodForm.querySelector('[name="proteinG"]').value = '25';
+  foodForm.querySelector('[name="carbG"]').value = '40';
+  foodForm.querySelector('[name="fatG"]').value = '10';
+  foodForm.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(() => dom.window.document.body.textContent.includes('อาหารทดสอบ'));
+  assert.ok(dom.window.document.body.textContent.includes('350 kcal'));
+  const completeCheckbox = dom.window.document.querySelector('[data-food-complete]');
+  completeCheckbox.checked = true;
+  completeCheckbox.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+
+  // Bundled food records remain editable without mutating the source catalog, and hidden records can be restored.
+  dom.window.document.querySelector('[data-action="add-food"]').click();
+  await waitFor(() => dom.window.document.querySelector('[data-food-category="meal"]'));
+  dom.window.document.querySelector('[data-food-category="meal"]').click();
+  await waitFor(() => dom.window.document.querySelector('[data-edit-food-base]'));
+  const baseFoodId = dom.window.document.querySelector('[data-edit-food-base]').dataset.editFoodBase;
+  dom.window.document.querySelector('[data-edit-food-base]').click();
+  await waitFor(() => dom.window.document.querySelector('#food-base-edit'));
+  dom.window.document.querySelector('#food-base-edit [name="kcal"]').value = '601';
+  dom.window.document.querySelector('#food-base-edit').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(() => !dom.window.document.querySelector('#food-base-edit'));
+  dom.window.document.querySelector('[data-action="add-food"]').click();
+  await waitFor(() => dom.window.document.querySelector('[data-food-category="meal"]'));
+  dom.window.document.querySelector('[data-food-category="meal"]').click();
+  await waitFor(() => dom.window.document.querySelector(`[data-edit-food-base="${baseFoodId}"]`));
+  dom.window.document.querySelector(`[data-edit-food-base="${baseFoodId}"]`).click();
+  await waitFor(() => dom.window.document.querySelector('#food-base-edit'));
+  assert.equal(dom.window.document.querySelector('#food-base-edit [name="kcal"]').value, '601');
+  dom.window.document.querySelector('[data-delete-food-base]').click();
+  await waitFor(() => !dom.window.document.querySelector('#food-base-edit'));
+  dom.window.document.querySelector('[data-action="add-food"]').click();
+  await waitFor(() => dom.window.document.querySelector('[data-food-category="custom"]'));
+  dom.window.document.querySelector('[data-food-category="custom"]').click();
+  await waitFor(() => dom.window.document.querySelector(`[data-restore-hidden-food="${baseFoodId}"]`));
+  dom.window.document.querySelector(`[data-restore-hidden-food="${baseFoodId}"]`).click();
 
   dom.window.location.hash = '#/checkin';
   dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));

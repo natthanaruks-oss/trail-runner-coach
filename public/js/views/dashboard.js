@@ -3,6 +3,9 @@ import { recommendSession } from '../engines/recommendation.js';
 import { formatNumber, metricCard, pageHeader, statusBadge, escapeHtml } from './components.js';
 import { formatThaiDate } from '../core/date.js';
 import { raceSummary } from '../core/races.js';
+import { foodTotals, nutritionTarget, dailyWaterTargetMl } from '../core/nutrition.js';
+import { STORES } from '../core/constants.js';
+import { nowIso } from '../core/date.js';
 
 export function renderDashboard(container, state, app) {
   const today = selectToday(state);
@@ -12,6 +15,10 @@ export function renderDashboard(container, state, app) {
   const recommendation = recommendSession(today.readiness, session);
   const readinessScore = today.readiness?.score ?? 0;
   const readinessStatus = today.readiness?.status || 'neutral';
+  const nutrition = foodTotals(state, today.dateKey);
+  const nutritionPlan = nutritionTarget(state, today.dateKey);
+  const water = state.waterLogs.find(item => item.date === today.dateKey)?.amountMl || 0;
+  const waterTarget = dailyWaterTargetMl(state, today.dateKey);
   const readinessLabel = today.readiness
     ? `${readinessStatus === 'green' ? 'พร้อมซ้อม' : readinessStatus === 'yellow' ? 'ลดโหลด' : 'พัก/ประเมินอาการ'}`
     : 'ยังไม่ได้ Check-in';
@@ -43,6 +50,23 @@ export function renderDashboard(container, state, app) {
       ${metricCard(countdown.race ? `ถึง ${escapeHtml(countdown.race.name)}` : 'วันแข่งขัน', countdown.race ? countdown.days : '—', countdown.race ? 'วัน' : '', countdown.race ? `${countdown.weeks} สัปดาห์ ${countdown.remainderDays} วัน` : 'ยังไม่มีสนามที่เลือก')}
       ${metricCard('สัปดาห์นี้', `${week.completionPct}%`, '', `${week.completedSessions}/${week.trainableSessions} sessions`)}
       ${metricCard('Strain วันนี้', today.load.strainScore, '/100', `${today.load.totalLoad} load units`)}
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>อาหารและน้ำวันนี้</h2><a href="#/fuel">เปิดบันทึกอาหาร</a></div>
+      <div class="grid two">
+        <a class="card flat tap-card" href="#/fuel">
+          <div class="card-title">Calories / Protein</div>
+          <div class="metric">${formatNumber(nutrition.kcal)}<small>/ ${formatNumber(nutritionPlan.kcal)} kcal</small></div>
+          <div class="submetric">Protein ${formatNumber(nutrition.proteinG,1)} / ${nutritionPlan.proteinG} g · Carb ${formatNumber(nutrition.carbG,1)} g</div>
+          <div class="progress" style="margin-top:12px"><span style="width:${Math.min(100,nutrition.kcal/Math.max(1,nutritionPlan.kcal)*100)}%;background:var(--mint)"></span></div>
+        </a>
+        <article class="card flat">
+          <div class="section-head"><div class="card-title">น้ำดื่ม</div><span>${formatNumber(water)} / ${formatNumber(waterTarget)} ml</span></div>
+          <div class="progress"><span style="width:${Math.min(100,water/Math.max(1,waterTarget)*100)}%;background:var(--blue)"></span></div>
+          <div class="button-row" style="margin-top:12px"><button class="button secondary" data-dashboard-water="250">+250 ml</button><button class="button secondary" data-dashboard-water="500">+500 ml</button></div>
+        </article>
+      </div>
     </section>
 
     <section class="section">
@@ -86,6 +110,11 @@ export function renderDashboard(container, state, app) {
 
   container.querySelector('[data-action="checkin"]')?.addEventListener('click', () => app.navigate('checkin'));
   container.querySelector('[data-action="record-workout"]')?.addEventListener('click', () => app.openWorkoutModal(session));
+  container.querySelectorAll('[data-dashboard-water]').forEach(button => button.addEventListener('click', async () => {
+    const current = app.store.getState().waterLogs.find(item => item.date === today.dateKey)?.amountMl || 0;
+    await app.store.upsertRecord(STORES.WATER_LOGS, { date: today.dateKey, amountMl: current + Number(button.dataset.dashboardWater), source: 'manual', updatedAt: nowIso() });
+    app.toast('เพิ่มน้ำดื่มแล้ว'); app.render();
+  }));
 }
 
 function renderPainAlert(today) {

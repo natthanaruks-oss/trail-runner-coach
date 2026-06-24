@@ -16,7 +16,11 @@ const state = {
   rehabLogs: [],
   gear: [],
   metadata: [],
-  bodyComposition: []
+  bodyComposition: [],
+  foodLogs: [],
+  customFoods: [],
+  waterLogs: [],
+  dailyFlags: []
 };
 
 function deepMerge(target, source) {
@@ -78,7 +82,7 @@ async function migrateEmbeddedProgramSettings(saved, now) {
 }
 
 export async function refreshAll() {
-  const [savedSettings, raceProfiles, trainingPlans, checkins, activities, painLogs, workouts, rehabLogs, gear, metadata, bodyComposition] = await Promise.all([
+  const [savedSettings, raceProfiles, trainingPlans, checkins, activities, painLogs, workouts, rehabLogs, gear, metadata, bodyComposition, foodLogs, customFoods, waterLogs, dailyFlags] = await Promise.all([
     db.get(STORES.SETTINGS, 'profile'),
     db.getAll(STORES.RACES),
     db.getAll(STORES.PLANS),
@@ -89,10 +93,14 @@ export async function refreshAll() {
     db.getAll(STORES.REHAB),
     db.getAll(STORES.GEAR),
     db.getAll(STORES.META),
-    db.getAll(STORES.BODY_COMPOSITION)
+    db.getAll(STORES.BODY_COMPOSITION),
+    db.getAll(STORES.FOOD_LOGS),
+    db.getAll(STORES.CUSTOM_FOODS),
+    db.getAll(STORES.WATER_LOGS),
+    db.getAll(STORES.DAILY_FLAGS)
   ]);
   if (savedSettings) state.settings = deepMerge(DEFAULT_SETTINGS, savedSettings);
-  Object.assign(state, { raceProfiles, trainingPlans, checkins, activities, painLogs, workouts, rehabLogs, gear, metadata, bodyComposition });
+  Object.assign(state, { raceProfiles, trainingPlans, checkins, activities, painLogs, workouts, rehabLogs, gear, metadata, bodyComposition, foodLogs, customFoods, waterLogs, dailyFlags });
   return state;
 }
 

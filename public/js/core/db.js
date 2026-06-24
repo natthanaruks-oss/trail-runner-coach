@@ -19,6 +19,10 @@ function openDatabase() {
       createStore(db, STORES.GEAR, { keyPath: 'id' });
       createStore(db, STORES.META, { keyPath: 'id' });
       createStore(db, STORES.BODY_COMPOSITION, { keyPath: 'id' }, [['date', 'date'], ['source', 'source']]);
+      createStore(db, STORES.FOOD_LOGS, { keyPath: 'id' }, [['date', 'date'], ['foodId', 'foodId'], ['createdAt', 'createdAt']]);
+      createStore(db, STORES.CUSTOM_FOODS, { keyPath: 'id' }, [['category', 'category'], ['nameTh', 'nameTh']]);
+      createStore(db, STORES.WATER_LOGS, { keyPath: 'date' }, [['updatedAt', 'updatedAt']]);
+      createStore(db, STORES.DAILY_FLAGS, { keyPath: 'date' }, [['foodComplete', 'foodComplete']]);
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);

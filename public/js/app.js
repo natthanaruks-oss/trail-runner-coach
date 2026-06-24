@@ -16,6 +16,9 @@ import { renderData, manualActivityRecord } from './views/data.js';
 import { renderSettings } from './views/settings.js';
 import { renderBody } from './views/body.js';
 import { renderRaces } from './views/races.js';
+import { renderTraining } from './views/training.js';
+import { renderFuel } from './views/fuel.js';
+import { renderLog } from './views/log.js';
 import { installReceiver as installAppleHealthReceiver } from './adapters/apple-health.js';
 import { modalTemplate, fieldNumber, escapeHtml } from './views/components.js';
 
@@ -37,7 +40,10 @@ const routes = {
   data: renderData,
   settings: renderSettings,
   body: renderBody,
-  races: renderRaces
+  races: renderRaces,
+  train: renderTraining,
+  fuel: renderFuel,
+  log: renderLog
 };
 
 const app = {
@@ -49,7 +55,8 @@ const app = {
   openWorkoutModal,
   openManualActivityModal,
   openQuickAdd,
-  closeModal
+  closeModal,
+  openModal
 };
 
 async function start() {
@@ -74,7 +81,8 @@ function currentRoute() {
 
 function render() {
   const route = currentRoute();
-  document.querySelectorAll('[data-route]').forEach(link => link.classList.toggle('active', link.dataset.route === route || (route !== 'today' && !['plan','checkin','rehab'].includes(route) && link.dataset.route === 'more')));
+  const activeNav = route === 'rehab' ? 'train' : route === 'nutrition' ? 'fuel' : ['pain','body','data','settings','races','gear','motivation','more','checkin'].includes(route) ? 'log' : route;
+  document.querySelectorAll('[data-route]').forEach(link => link.classList.toggle('active', link.dataset.route === activeNav));
   routes[route](view, store.getState(), app);
   view.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: 'instant' });
@@ -101,14 +109,18 @@ function closeModal() {
 function openQuickAdd() {
   openModal('เพิ่มข้อมูล', `<div class="grid two">
     <button class="button primary" data-quick="checkin">♡ Readiness</button>
+    <button class="button secondary" data-quick="food">🍚 อาหาร</button>
     <button class="button secondary" data-quick="activity">🏃 Activity</button>
     <button class="button secondary" data-quick="pain">🩹 Pain Log</button>
+    <button class="button secondary" data-quick="sleep">😴 Sleep / RHR</button>
     <button class="button secondary" data-quick="data">⌁ Import file</button>
   </div>`);
   modalContent.querySelectorAll('[data-quick]').forEach(button => button.addEventListener('click', () => {
     const action = button.dataset.quick;
     closeModal();
     if (action === 'activity') openManualActivityModal();
+    else if (action === 'food') { app.ui.fuelTab = 'food'; app.ui.foodDate = localDateKey(); navigateAfterClose('fuel'); }
+    else if (action === 'sleep') { app.ui.logTab = 'sleep'; navigateAfterClose('log'); }
     else navigateAfterClose(action);
   }));
 }

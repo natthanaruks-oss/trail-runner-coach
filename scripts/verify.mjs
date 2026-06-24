@@ -7,10 +7,17 @@ const required = [
   'public/js/app.js',
   'public/js/core/db.js',
   'public/js/core/races.js',
+  'public/js/core/nutrition.js',
   'public/js/views/races.js',
+  'public/js/views/fuel.js',
+  'public/js/views/training.js',
+  'public/js/views/log.js',
+  'public/js/data/food-catalog.js',
+  'public/js/data/training-library.js',
   'public/manifest.webmanifest',
   'wrangler.jsonc',
-  'ios/TrailRunnerCoach/project.yml'
+  'ios/TrailRunnerCoach/project.yml',
+  'docs/FEATURE_PARITY.md'
 ];
 
 for (const path of required) {
@@ -33,7 +40,17 @@ for (const file of await walk(root)) {
   }
 }
 
-console.log('Repository verification passed.');
+const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
+if (packageJson.version !== '1.1.0') throw new Error(`Expected package version 1.1.0, received ${packageJson.version}`);
+const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
+if (!serviceWorker.includes('trail-runner-coach-v1.1.0')) throw new Error('Service-worker cache version was not bumped to 1.1.0');
+const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
+if (!constants.includes("APP_VERSION = '1.1.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+const foodCatalog = await readFile(resolve(root, 'public/js/data/food-catalog.js'), 'utf8');
+const foodCount = (foodCatalog.match(/"id":"legacy-food-/g) || []).length;
+if (foodCount < 400) throw new Error(`Legacy food catalog is unexpectedly small: ${foodCount}`);
+
+console.log(`Repository verification passed (${foodCount} bundled foods).`);
 
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });

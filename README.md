@@ -1,61 +1,106 @@
 # Trail Runner Coach
 
-Local-first adaptive trail running coach designed for long-term use across multiple races. The web app combines training plans, actual activity, strain, recovery, readiness, pain monitoring, rehab, nutrition, gear and body-composition history without requiring a project backend.
+Local-first adaptive trail running coach สำหรับใช้งานระยะยาวหลายสนาม โดยรวมแผนซ้อม ผลจริง Strain, Recovery, Readiness, Pain/Rehab, อาหาร พลังงาน น้ำดื่ม Gear และ Body Composition ไว้ในระบบเดียว
+
+## Version 1.1 — Legacy Feature Parity
+
+รุ่นนี้นำ workflow ที่ใช้งานจริงจาก `roadtopyc70` กลับมาเขียนใหม่บนสถาปัตยกรรม Modular + IndexedDB โดยไม่ย้อนกลับไปใช้ `index.html` ไฟล์เดียว
+
+เมนูหลัก:
+
+1. **วันนี้** — Dashboard, Readiness, Strain/Recovery, อาหารและน้ำวันนี้
+2. **แผน** — Multi-race training plan และบันทึกผลจริง
+3. **ฝึก** — Rehab, Strength, Running Drills และอุปกรณ์ฝึกที่บ้าน
+4. **อาหาร** — Food log, Energy balance, Nutrition guide, Race fueling และ HR Zones
+5. **บันทึก** — Motivation, Pain, Body/Weight, Sleep/RHR และ Data tools
+
+### Food workflow ที่คืนกลับมา
+
+- ฐานอาหารเดิม 449 รายการ พร้อมค้นหาและหมวดหมู่
+- รายการล่าสุด, ปรับ portion, เพิ่ม/แก้ไข/ลบรายการประจำวัน
+- สร้างและจัดการเมนูส่วนตัว
+- แก้ไขหรือซ่อนเมนูในฐานเดิมได้โดยสร้าง user override โดยไม่ทำลาย source catalog
+- Water tracker และเครื่องหมาย “บันทึกครบทั้งวัน”
+- Calories, Protein, Carb, Fat และ Energy balance ย้อนหลัง 7/14/30 วัน
+- เป้าพลังงานปรับตามแผนซ้อม/กิจกรรม/Apple Health โดยไม่ใช้เป็นคำสั่งเร่งลดน้ำหนักช่วง Build/Peak
+
+ค่าพลังงานใน legacy food catalog เป็น **estimated serving values** เพื่อใช้ติดตามแนวโน้ม ไม่ใช่ผลตรวจห้องปฏิบัติการ
 
 ## Product principles
 
-- **Athlete first:** readiness and pain can reduce the plan without treating recovery as failure.
-- **Multi-race:** race profiles and training plans are separate domain objects. RTC 70 is included only as the initial seed profile.
-- **Local-first:** browser data is stored in IndexedDB. Backup and restore use JSON.
-- **Provider-neutral:** Apple Health, Garmin, Suunto, FIT/TCX/GPX and manual entry normalize into one schema.
-- **Explainable:** strain and readiness show factors and confidence; they are decision support, not medical diagnosis.
+- **Athlete first:** Pain และ Recovery สามารถลดโหลดได้โดยไม่ถือว่าการพักคือความล้มเหลว
+- **Feature continuity:** ห้ามตัด workflow ที่ผู้ใช้ใช้งานจริงโดยไม่มี migration และ parity review
+- **Multi-race:** `RaceProfile` แยกจาก `TrainingPlan`; RTC 70 เป็นเพียง initial profile
+- **Local-first:** ข้อมูลเก็บใน IndexedDB และ Export/Import เป็น JSON
+- **Provider-neutral:** Apple Health, Garmin, Suunto, GPX/TCX/CSV และ Manual normalize เข้า schema กลาง
+- **Explainable:** Strain/Readiness แสดงปัจจัยและ confidence; ไม่ใช่การวินิจฉัยทางการแพทย์
 
 ## Repository structure
 
 ```text
 public/                    Cloudflare static web app / PWA
-  js/core/                 database, store, race and plan domain logic
+  js/core/                 IndexedDB, store, nutrition, race and plan logic
   js/engines/              strain, recovery, readiness, recommendation
-  js/adapters/             Apple Health bridge, importers, legacy migration
-  js/data/                 plan template, rehab and guide data
-  js/views/                route-level UI modules
+  js/adapters/             Apple Health, file import, legacy migration
+  js/data/                 food catalog, training library, plan and guides
+  js/views/                modular route-level UI
 ios/TrailRunnerCoach/      SwiftUI + HealthKit companion app
 workers/wearable-sync/     optional Garmin/Suunto OAuth scaffold
-test/                      Node unit and browser integration tests
-docs/                      architecture, schema, scoring and integration notes
+test/                      unit and browser integration tests
+docs/                      architecture, parity, schema and integration notes
 scripts/                   repository verification
 ```
 
-## Web app setup
+## Development
 
-Requires Node.js 20 or newer.
+Requires **Node.js 22.16.0 or newer**.
 
 ```bash
-npm install
+npm clean-install
 npm test
 npm run check
 npm run dev
 ```
 
-Deploy to Cloudflare Workers & Pages:
+Cloudflare deploy:
 
 ```bash
 npm run deploy
 ```
 
-`wrangler.jsonc` deploys `./public` to the Cloudflare Worker **`trail-runner-coaches`** and uses SPA fallback.
+`wrangler.jsonc` deploys `./public` to Worker **`trail-runner-coaches`** with SPA fallback.
 
-## Race and plan model
+### Cloudflare workaround when npm automatic install fails
 
-A `RaceProfile` contains date, distance, gain/loss, cut-off, start time, technical level and night-running requirements. A `TrainingPlan` contains a start date and weeks/sessions linked by `raceId`.
+Current project configuration may use:
 
-The bundled RTC 70 profile is starter data, not an application constant. New races can be created from **More → สนามเป้าหมาย**. The current 20-week plan may be cloned as a baseline, with Race Day distance and elevation synchronized to the selected profile.
+```text
+SKIP_DEPENDENCY_INSTALL=true
+Build command: leave blank, or echo "No build step"
+Deploy command: pnpm dlx wrangler@4.103.0 deploy
+Root directory: /
+```
+
+Do not enter the literal word `None` in Build command.
+
+## Legacy migration
+
+The app imports old `roadtopyc70` backups and migrates:
+
+- plan completion and actual workouts
+- readiness, sleep and resting HR
+- pain/niggle history
+- food logs, custom foods and water
+- weight history and basic settings
+- home-training equipment
+
+New backups include every IndexedDB store, including food, custom-food overrides, water and daily completion flags.
 
 ## Apple Health
 
-A normal website or PWA cannot access HealthKit directly. The companion app in `ios/TrailRunnerCoach` opens the deployed web app in `WKWebView`, requests HealthKit permission and passes normalized data to the page on-device.
+Safari/PWA cannot read HealthKit directly. The companion app under `ios/TrailRunnerCoach` uses SwiftUI + HealthKit + WKWebView and passes normalized data to the web app on-device.
 
-On a Mac:
+On macOS:
 
 ```bash
 brew install xcodegen
@@ -64,27 +109,8 @@ xcodegen generate
 open TrailRunnerCoach.xcodeproj
 ```
 
-Then:
+Set a unique Bundle ID, select an Apple Development Team, confirm HealthKit capability, and test on a physical iPhone.
 
-1. Change `PRODUCT_BUNDLE_IDENTIFIER` from `com.yourcompany.trailrunnercoach` to your unique identifier.
-2. Select your Apple Development Team.
-3. Confirm the HealthKit capability and usage descriptions.
-4. Run on a physical iPhone.
-5. Enter the deployed Cloudflare URL in the companion app.
-6. Open **ข้อมูล & Wearables** and sync Apple Health.
+## Privacy
 
-## Privacy and source control
-
-Do not commit personal exports, InBody records, Apple Health exports, activity files, OAuth tokens or secrets. The `.gitignore` already excludes common private-data paths and file types.
-
-The previously generated personal InBody import remains compatible because the importer accepts both the current schema and the legacy `rtc70-body-composition` schema. Keep that file outside the repository.
-
-## Current boundaries
-
-- Apple Health requires building the iOS companion on macOS/Xcode and testing on a physical iPhone.
-- Garmin and Suunto live sync are scaffolded but still require provider approval, OAuth credentials and a Worker deployment.
-- The bundled 20-week plan is a baseline template; future plan generation should account for race distance, vertical, technicality, training history, injury risk and available weeks rather than scaling distance alone.
-
-## Build runtime
-
-Cloudflare Workers Builds must use Node.js 22.16.0 or newer. The repository pins this through `.node-version`, and Wrangler is pinned to 4.103.0.
+Do not commit Apple Health exports, InBody files, FIT/TCX/GPX, app backups, OAuth tokens, `.env`, signing data or other personal health information. The deploy package contains no user health data.

@@ -1,7 +1,7 @@
 export const APP_NAME = 'Trail Runner Coach';
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 export const DB_NAME = 'trail_runner_coach';
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 export const LEGACY_STORAGE_KEYS = Object.freeze(['rtc70_v2', 'trail_runner_coach_v1']);
 
 export const STORES = Object.freeze({
@@ -15,7 +15,11 @@ export const STORES = Object.freeze({
   REHAB: 'rehabLogs',
   GEAR: 'gear',
   META: 'metadata',
-  BODY_COMPOSITION: 'bodyComposition'
+  BODY_COMPOSITION: 'bodyComposition',
+  FOOD_LOGS: 'foodLogs',
+  CUSTOM_FOODS: 'customFoods',
+  WATER_LOGS: 'waterLogs',
+  DAILY_FLAGS: 'dailyFlags'
 });
 
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -42,7 +46,13 @@ export const DEFAULT_SETTINGS = Object.freeze({
   preferences: {
     weekStartsOn: 1,
     units: 'metric',
-    allowNotifications: false
+    allowNotifications: false,
+    nonExerciseActivityFactor: 1.2
+  },
+  nutrition: {
+    bmrKcal: null,
+    proteinTargetGPerKg: 1.8,
+    waterBaseMlPerKg: 30
   },
   createdAt: null,
   updatedAt: null

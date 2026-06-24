@@ -117,3 +117,23 @@ test('current and legacy InBody import schemas are accepted', () => {
     assert.equal(result.records[0].skeletalMuscleMassKg, 34);
   }
 });
+
+import { energyBalanceForDate, foodTotals, nutritionTarget } from '../public/js/core/nutrition.js';
+
+test('nutrition totals and complete-day energy balance use food logs without hiding incomplete days', () => {
+  const state = {
+    settings: { athlete: { weightKg: 80, age: 34, heightCm: 175, sex: 'male' }, nutrition: { proteinTargetGPerKg: 1.8, waterBaseMlPerKg: 30 }, preferences: { nonExerciseActivityFactor: 1.2 }, selection: {} },
+    bodyComposition: [], foodLogs: [
+      { date: '2026-06-23', kcal: 600, proteinG: 30, carbG: 75, fatG: 20 },
+      { date: '2026-06-23', kcal: 120, proteinG: 24, carbG: 3, fatG: 2 }
+    ], dailyFlags: [{ date: '2026-06-23', foodComplete: true }], activities: [], checkins: [], trainingPlans: [], raceProfiles: []
+  };
+  const totals = foodTotals(state, '2026-06-23');
+  assert.equal(totals.kcal, 720);
+  assert.equal(totals.proteinG, 54);
+  const target = nutritionTarget(state, '2026-06-23');
+  assert.ok(target.kcal > 1500);
+  const balance = energyBalanceForDate(state, '2026-06-23');
+  assert.equal(balance.foodComplete, true);
+  assert.equal(balance.intakeKcal, 720);
+});
