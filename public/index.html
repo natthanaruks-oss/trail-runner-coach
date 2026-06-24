@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b1220">
+  <meta name="theme-color" content="#0d0d0f">
+  <meta name="color-scheme" content="dark">
   <meta name="description" content="Local-first adaptive trail running coach with recovery, strain, pain and multi-race planning">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
@@ -14,20 +15,20 @@
   <div id="app" class="app-shell">
     <header class="app-header">
       <a class="brand" href="#/today" aria-label="Trail Runner Coach Home">
-        <span class="brand-mark" aria-hidden="true">▲</span>
-        <span><strong>TRAIL RUNNER</strong><small>ADAPTIVE COACH</small></span>
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 18 9.2 7.5l3.1 5 2.7-4.2L21 18H3Z"/></svg></span>
+        <span><strong>Trail Runner Coach</strong><small>TRAIN · RECOVER · ADAPT</small></span>
       </a>
-      <button id="quick-add" class="icon-button" aria-label="เพิ่มข้อมูล">＋</button>
+      <button id="quick-add" class="icon-button" aria-label="เพิ่มข้อมูล"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     </header>
     <main id="view" class="view" tabindex="-1">
       <div class="loading-card">กำลังเตรียมข้อมูลในเครื่อง…</div>
     </main>
     <nav class="bottom-nav" aria-label="เมนูหลัก">
-      <a href="#/today" data-route="today"><span>⌂</span><small>วันนี้</small></a>
-      <a href="#/plan" data-route="plan"><span>▦</span><small>แผน</small></a>
-      <a href="#/train" data-route="train"><span>↟</span><small>ฝึก</small></a>
-      <a href="#/fuel" data-route="fuel"><span>◉</span><small>อาหาร</small></a>
-      <a href="#/log" data-route="log"><span>☷</span><small>บันทึก</small></a>
+      <a href="#/today" data-route="today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8Z"/></svg><small>วันนี้</small></a>
+      <a href="#/plan" data-route="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3M18 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg><small>แผน</small></a>
+      <a href="#/train" data-route="train"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 18 5.5-8 3 4 3.2-6L21 18H3Z"/><path d="M7 18c2.5-2 4-2.2 6-1.2 1.6.8 3 .7 4.2-.2"/></svg><small>ฝึก</small></a>
+      <a href="#/fuel" data-route="fuel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v7a3 3 0 0 1-3 3V3M5 13v8M16 3v18M16 3c3 1 4 3.5 4 6 0 2.8-1.5 4.5-4 5"/></svg><small>อาหาร</small></a>
+      <a href="#/log" data-route="log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><small>บันทึก</small></a>
     </nav>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

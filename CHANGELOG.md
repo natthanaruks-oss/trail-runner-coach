@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.1 — Typography & Bevel-inspired UI polish
+
+- Replaced the mixed Inter/fallback stack with native Apple/Thai/Windows system fonts for consistent offline rendering.
+- Normalized font weights and minimum label sizes to prevent synthetic or unusually small text.
+- Rebuilt primary navigation icons as inline SVG so they do not depend on symbol fonts.
+- Refined cards, rings, spacing, tab controls, forms and bottom navigation with a cleaner health-dashboard visual language.
+- Kept all v1.2.0 Strain, Recovery, Readiness, food logging, rehab and legacy workflows unchanged.
+- Bumped application and PWA cache version to 1.2.1.
+
 ## 1.2.0 — Strain & Recovery Engine
 
 - Added three visible daily scores: Strain 0–21, Recovery 0–100 and Readiness 0–100.

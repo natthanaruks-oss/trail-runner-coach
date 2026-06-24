@@ -123,3 +123,8 @@ Set a unique Bundle ID, select an Apple Development Team, confirm HealthKit capa
 ## Privacy
 
 Do not commit Apple Health exports, InBody files, FIT/TCX/GPX, app backups, OAuth tokens, `.env`, signing data or other personal health information. The deploy package contains no user health data.
+
+
+## Visual system 1.2.1
+
+The UI uses native system fonts rather than downloading a web font, so Thai and English remain consistent in the PWA and offline mode. Typography, rings and navigation are inspired by modern connected-health apps while retaining the project’s own brand and functionality.

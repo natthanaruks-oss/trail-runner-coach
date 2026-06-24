@@ -1,4 +1,4 @@
-# Build Report — Trail Runner Coach 1.2.0
+# Build Report — Trail Runner Coach 1.2.1
 
 ## Scope delivered
 
@@ -31,7 +31,7 @@
 - Wrangler: 4.103.0
 - Cloudflare Worker name: `trail-runner-coaches`
 - Static asset directory: `./public`
-- Package/application/PWA cache version: 1.2.0
+- Package/application/PWA cache version: 1.2.1
 - IndexedDB database: `trail_runner_coach`, schema version 4
 
 Recommended Cloudflare settings when automatic npm install is disabled:
@@ -48,3 +48,19 @@ Do not enter the literal word `None` in Build command.
 ## Privacy check
 
 The deploy package excludes `node_modules`, `.wrangler`, `.env`, Apple Health exports, InBody imports, FIT/TCX/GPX files, user backups and signing data.
+
+
+## UI verification
+
+- Native Thai/English font stack; no external font files or CDN dependency.
+- Unsupported synthetic weights (750/850/900) are visually overridden with 600/650/700.
+- Bottom navigation and quick-add icons use inline SVG rather than font glyphs.
+- Mobile breakpoints checked for 360 px and 520 px widths.
+
+## Verified on 24 June 2026
+
+- `npm run check`: passed — 16/16 tests.
+- Repository verification: passed — 449 bundled foods retained.
+- `wrangler deploy --dry-run`: passed — 57 public assets detected.
+- CSS structural check: balanced braces.
+- No `node_modules`, `.wrangler`, `.env`, Apple Health export or personal InBody payload included in the deploy package.
