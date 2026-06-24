@@ -1,9 +1,9 @@
 {
   "name": "trail-runner-coach",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
-  "description": "Local-first adaptive trail training coach with legacy workflow parity, multi-race planning and Apple Health bridge",
+  "description": "Local-first adaptive trail training coach with expanded Thai food logging, calorie deficit filters, strain/recovery and wearable connection architecture",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",

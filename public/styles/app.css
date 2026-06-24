@@ -606,3 +606,34 @@ small { line-height: 1.4; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* v1.3.0 — expanded food, filtered calorie deficit, provider connections, smooth updates */
+html { scrollbar-gutter: stable; }
+body { overflow-anchor: none; }
+.view { min-height: calc(100vh - 170px); }
+.view[aria-busy="true"] { cursor: progress; }
+.energy-filter { display:grid; gap:12px; }
+.energy-date-filter { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) auto; gap:10px; align-items:end; }
+.energy-date-filter .button { min-width:110px; }
+.energy-summary-grid .metric { font-size:25px; }
+.deficit-card { border-color:rgba(255,180,84,.25); background:linear-gradient(180deg,rgba(255,180,84,.05),var(--panel)); }
+.energy-day.incomplete { opacity:.32; }
+.connection-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
+.connection-card { min-height:190px; display:flex; flex-direction:column; }
+.connection-card .button-row { margin-top:auto !important; }
+.connection-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.connection-card-head h2 { margin:2px 0 0; font-size:18px; }
+.step-number { width:34px; height:34px; flex:0 0 34px; display:grid; place-items:center; border-radius:11px; background:var(--mint-dark); color:var(--mint); font-weight:700; }
+.food-categories { scroll-snap-type:x proximity; }
+.food-categories .segmented-button { scroll-snap-align:start; }
+
+@media (max-width: 620px) {
+  .connection-grid { grid-template-columns:1fr; }
+  .energy-date-filter { grid-template-columns:1fr 1fr; }
+  .energy-date-filter .button { grid-column:1/-1; }
+}
+
+@media (max-width: 420px) {
+  .energy-summary-grid { grid-template-columns:1fr 1fr !important; }
+  .energy-summary-grid .metric { font-size:22px; }
+}

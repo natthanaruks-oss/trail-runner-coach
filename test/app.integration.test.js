@@ -45,6 +45,7 @@ test('application initializes the multi-race IndexedDB model and renders primary
     ['nutrition', 'Nutrition & Fueling'],
     ['gear', 'Gear Checklist'],
     ['data', 'ข้อมูล & Wearables'],
+    ['connections', 'การเชื่อมต่อ'],
     ['body', 'Body & InBody'],
     ['races', 'สนามเป้าหมาย'],
     ['settings', 'ตั้งค่า'],

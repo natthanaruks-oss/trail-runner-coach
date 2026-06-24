@@ -135,7 +135,7 @@ test('current and legacy InBody import schemas are accepted', () => {
   }
 });
 
-import { energyBalanceForDate, foodTotals, nutritionTarget } from '../public/js/core/nutrition.js';
+import { energyBalanceForDate, energyBalancePeriod, foodTotals, nutritionTarget } from '../public/js/core/nutrition.js';
 
 test('nutrition totals and complete-day energy balance use food logs without hiding incomplete days', () => {
   const state = {
@@ -153,4 +153,34 @@ test('nutrition totals and complete-day energy balance use food logs without hid
   const balance = energyBalanceForDate(state, '2026-06-23');
   assert.equal(balance.foodComplete, true);
   assert.equal(balance.intakeKcal, 720);
+});
+
+
+test('filtered energy period separates deficit from surplus and reports coverage', () => {
+  const state = {
+    settings: { athlete: { weightKg: 80, age: 34, heightCm: 175, sex: 'male' }, nutrition: {}, preferences: { nonExerciseActivityFactor: 1.2 }, selection: {} },
+    bodyComposition: [], activities: [], checkins: [], trainingPlans: [], raceProfiles: [],
+    foodLogs: [
+      { date: '2026-06-01', kcal: 1500, proteinG: 100, carbG: 180, fatG: 45 },
+      { date: '2026-06-02', kcal: 2600, proteinG: 100, carbG: 300, fatG: 80 }
+    ],
+    dailyFlags: [
+      { date: '2026-06-01', foodComplete: true },
+      { date: '2026-06-02', foodComplete: true }
+    ]
+  };
+  const period = energyBalancePeriod(state, '2026-06-01', '2026-06-03');
+  assert.equal(period.selectedDays, 3);
+  assert.equal(period.completeDays, 2);
+  assert.equal(period.coveragePct, 67);
+  assert.ok(period.deficitKcal > 0);
+  assert.ok(period.surplusKcal >= 0);
+});
+
+test('expanded Thai prepared food dataset contains 1375 searchable records', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const foods = JSON.parse(await readFile(new URL('../public/data/thai-prepared-foods.json', import.meta.url), 'utf8'));
+  assert.equal(foods.length, 1375);
+  assert.ok(foods.some(item => item.nameTh === 'ข้าวผัดหมู'));
+  assert.ok(foods.every(item => item.servingGrams === 100));
 });

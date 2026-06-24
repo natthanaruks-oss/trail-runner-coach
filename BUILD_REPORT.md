@@ -1,29 +1,32 @@
-# Build Report — Trail Runner Coach 1.2.1
+# Build Report — Trail Runner Coach 1.3.0
 
 ## Scope delivered
 
-- Preserved all v1.1 primary workflows: Today, Plan, Train, Food and Log.
-- Preserved the 449-food catalog, custom foods, catalog overrides, water, energy balance, rehab, pain, body, sleep, backup and legacy migration.
-- Added user-facing Strain 0–21, Recovery 0–100 and Readiness 0–100.
-- Added workout + behavior Strain, including trail, vertical gain/loss, downhill, night running, steps, active energy and exercise minutes.
-- Added personalized RHR/HRV/Sleep baselines and recent Strain context to Recovery.
-- Added Data Confidence, score drivers, baseline maturity and a 14-day score detail page.
-- Added configurable sleep target.
-- Retained Pain Safety Gate and wearable-only Yellow cap.
+- Preserved all primary workflows: Today, Plan, Train, Food and Log.
+- Preserved Strain 0–21, Recovery 0–100, Readiness 0–100, Pain Safety Gate, Rehab, Plan, Body, Sleep, Backup and legacy migration.
+- Expanded the food catalog from 449 to **1,824 records** by adding 1,375 estimated Thai prepared foods.
+- Added lazy food-data loading, Thai/English search, expanded category filters and gram-based portion entry.
+- Added calorie deficit/surplus analysis for 7/14/30/90-day and custom date filters.
+- Added complete-day coverage protection, deficit/surplus totals, net offset, average deficit and theoretical weight trend.
+- Added Apple Health, Garmin, Suunto and Strava connection center.
+- Implemented Strava OAuth/sync Worker path; created Garmin/Suunto secure OAuth boundaries pending provider access.
+- Removed full-store refresh after normal writes and preserved per-route scroll to reduce flicker and jump-to-top behavior.
 
 ## Verification evidence
 
 - Repository verification: passed.
-- Bundled food records: 449.
-- Automated tests: 16/16 passed.
-- Browser/IndexedDB integration test: passed, including the new `#/scores` route.
+- Legacy bundled foods: 449.
+- Added Thai prepared foods: 1,375.
+- Total searchable food records: 1,824.
+- Automated tests: **18/18 passed**.
+- Browser/IndexedDB route integration: passed, including `#/connections`.
+- Food CRUD, catalog override and expanded dataset tests: passed.
+- Custom filtered calorie-deficit test: passed.
 - Legacy backup migration test: passed.
-- Nutrition CRUD and catalog override integration: passed.
-- Strain 0–21 behavior-only load test: passed.
-- High previous Strain reducing Recovery test: passed.
-- Pain ≥6 forcing Red Readiness test: passed.
-- Cloudflare Wrangler 4.103.0 dry-run: passed; 57 public asset files detected.
-- npm audit: 0 vulnerabilities.
+- Strain/Recovery/Readiness safety tests: passed.
+- JavaScript syntax checks: passed.
+- Cloudflare Wrangler 4.103.0 dry-run: passed; **62 public asset files** detected.
+- npm audit: **0 vulnerabilities**.
 
 ## Runtime and deployment
 
@@ -31,7 +34,7 @@
 - Wrangler: 4.103.0
 - Cloudflare Worker name: `trail-runner-coaches`
 - Static asset directory: `./public`
-- Package/application/PWA cache version: 1.2.1
+- Package/application/PWA cache version: 1.3.0
 - IndexedDB database: `trail_runner_coach`, schema version 4
 
 Recommended Cloudflare settings when automatic npm install is disabled:
@@ -45,22 +48,28 @@ Root directory: /
 
 Do not enter the literal word `None` in Build command.
 
+## Interaction verification
+
+- Normal record writes update IndexedDB and local in-memory state without calling a full `refreshAll()`.
+- Same-route renders retain the current scroll position.
+- Route changes store and restore independent scroll positions.
+- Browser history scroll restoration is manual.
+- No global opacity/loading transition is used for routine saves.
+- Stable scrollbar and disabled overflow anchoring reduce layout jumps.
+
+## Provider integration status
+
+- Apple Health: native HealthKit companion source is included; Xcode signing and physical-iPhone testing are still required.
+- Strava: OAuth, token refresh, webhook endpoint and recent activity normalization are implemented; API app credentials and Worker deployment are required.
+- Garmin: OAuth/security boundary is ready; live Health/Activity mapping requires Developer Program approval and granted documentation/scopes.
+- Suunto: OAuth/security boundary is ready; live workout/FIT mapping requires partner approval and granted endpoint details.
+
 ## Privacy check
 
-The deploy package excludes `node_modules`, `.wrangler`, `.env`, Apple Health exports, InBody imports, FIT/TCX/GPX files, user backups and signing data.
-
-
-## UI verification
-
-- Native Thai/English font stack; no external font files or CDN dependency.
-- Unsupported synthetic weights (750/850/900) are visually overridden with 600/650/700.
-- Bottom navigation and quick-add icons use inline SVG rather than font glyphs.
-- Mobile breakpoints checked for 360 px and 520 px widths.
+The deploy package excludes `node_modules`, `.wrangler`, `.env`, Apple Health exports, InBody imports, FIT/TCX/GPX files, user backups, OAuth secrets and signing data.
 
 ## Verified on 24 June 2026
 
-- `npm run check`: passed — 16/16 tests.
-- Repository verification: passed — 449 bundled foods retained.
-- `wrangler deploy --dry-run`: passed — 57 public assets detected.
-- CSS structural check: balanced braces.
-- No `node_modules`, `.wrangler`, `.env`, Apple Health export or personal InBody payload included in the deploy package.
+- `npm run check`: passed — 18/18 tests.
+- `wrangler deploy --dry-run`: passed — 62 public assets.
+- `npm audit --omit=dev`: 0 vulnerabilities.

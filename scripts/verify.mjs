@@ -15,6 +15,10 @@ const required = [
   'public/js/views/scores.js',
   'public/js/data/food-catalog.js',
   'public/js/data/training-library.js',
+  'public/js/data/thai-food-dataset.js',
+  'public/data/thai-prepared-foods.json',
+  'public/js/views/connections.js',
+  'public/js/adapters/provider-sync.js',
   'public/manifest.webmanifest',
   'wrangler.jsonc',
   'ios/TrailRunnerCoach/project.yml',
@@ -42,16 +46,18 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '1.2.1') throw new Error(`Expected package version 1.2.1, received ${packageJson.version}`);
+if (packageJson.version !== '1.3.0') throw new Error(`Expected package version 1.3.0, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v1.2.1')) throw new Error('Service-worker cache version was not bumped to 1.2.1');
+if (!serviceWorker.includes('trail-runner-coach-v1.3.0')) throw new Error('Service-worker cache version was not bumped to 1.3.0');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '1.2.1'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '1.3.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const foodCatalog = await readFile(resolve(root, 'public/js/data/food-catalog.js'), 'utf8');
 const foodCount = (foodCatalog.match(/"id":"legacy-food-/g) || []).length;
 if (foodCount < 400) throw new Error(`Legacy food catalog is unexpectedly small: ${foodCount}`);
 
-console.log(`Repository verification passed (${foodCount} bundled foods).`);
+const preparedFoods = JSON.parse(await readFile(resolve(root, 'public/data/thai-prepared-foods.json'), 'utf8'));
+if (preparedFoods.length !== 1375) throw new Error(`Expected 1375 prepared foods, received ${preparedFoods.length}`);
+console.log(`Repository verification passed (${foodCount} legacy + ${preparedFoods.length} prepared foods).`);
 
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });

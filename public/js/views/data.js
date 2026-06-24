@@ -23,8 +23,9 @@ export function renderData(container, state, app) {
       ${sourceCard('Apple Health', appleBridge ? 'พร้อม Sync' : 'ต้องเปิดผ่าน iOS Companion', appleBridge ? 'green' : 'yellow', 'Sleep, RHR, HRV, Steps, Energy, Workout และ Body metrics')}
       ${sourceCard('กรอกเอง', 'พร้อมใช้', 'green', 'Pain, Fatigue, Stress, Soreness และ Session RPE')}
       ${sourceCard('GPX / TCX / CSV', 'พร้อมใช้', 'green', 'นำเข้ากิจกรรมและ Vertical จากแพลตฟอร์มนาฬิกา')}
-      ${sourceCard('Garmin / Suunto', 'ภายหลัง', 'neutral', 'Provider adapter ใช้ schema เดียวกับ Apple Health')}
+      ${sourceCard('Garmin / Suunto / Strava', state.settings?.integrations?.syncBaseUrl ? 'พร้อมตั้งค่า OAuth' : 'ต้องใช้ Sync Worker', 'neutral', 'Cloud OAuth ผ่าน Worker และแปลงเข้าสู่ schema เดียวกับ Apple Health')}
     </section>
+    <button class="button secondary full" data-action="open-connections" style="margin-top:12px">จัดการ Apple Health, Garmin, Suunto และ Strava</button>
 
     <section class="section">
       <div class="section-head"><h2>Apple Health Sync</h2><span>${appleSync?.lastSyncAt ? `ล่าสุด ${formatTimestamp(appleSync.lastSyncAt)}` : 'ยังไม่เคย Sync'}</span></div>
@@ -53,6 +54,8 @@ export function renderData(container, state, app) {
 
     <section class="section"><div class="section-head"><h2>กิจกรรมล่าสุด</h2><span>${state.activities.length} รายการทั้งหมด</span></div><div class="list">${recent.length ? recent.map(activity => `<article class="list-item"><div style="font-size:22px">${activity.terrain === 'trail' ? '⛰' : '🏃'}</div><div class="grow"><strong>${escapeHtml(activity.name || activity.type)}</strong><small>${escapeHtml(activity.date)} · ${formatNumber(activity.distanceKm, 1)} km · +${formatNumber(activity.elevationGainM)} m · ${formatNumber(activity.durationMin)} นาที · RPE ${activity.rpe ?? 'Auto'} · ${escapeHtml(activity.source)}</small></div><button class="button secondary" data-delete-activity="${activity.id}" style="padding:7px 9px;min-height:34px">ลบ</button></article>`).join('') : emptyState('ยังไม่มีกิจกรรม')}</div></section>
     <div class="callout">Apple Health ให้ Recovery และกิจกรรมเป็นฐานหลัก ส่วน GPX/TCX ใช้เติม Vertical/Route เมื่อ HealthKit ต้นทางไม่ได้ส่งค่ามาครบ ระบบจะไม่ถือว่าข้อมูลศูนย์คือ Vertical จริงเสมอไป</div>`;
+
+  container.querySelector('[data-action="open-connections"]')?.addEventListener('click', () => app.navigate('connections'));
 
   const syncButton = container.querySelector('[data-action="apple-sync"]');
   syncButton?.addEventListener('click', async () => {

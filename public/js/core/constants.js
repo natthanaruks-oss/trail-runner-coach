@@ -1,5 +1,5 @@
 export const APP_NAME = 'Trail Runner Coach';
-export const APP_VERSION = '1.2.1';
+export const APP_VERSION = '1.3.0';
 export const DB_NAME = 'trail_runner_coach';
 export const DB_VERSION = 4;
 export const LEGACY_STORAGE_KEYS = Object.freeze(['rtc70_v2', 'trail_runner_coach_v1']);
@@ -55,6 +55,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
     proteinTargetGPerKg: 1.8,
     waterBaseMlPerKg: 30
   },
+  integrations: {
+    syncBaseUrl: ''
+  },
   createdAt: null,
   updatedAt: null
 });
@@ -92,6 +95,7 @@ export const SOURCE_TYPES = Object.freeze({
   LEGACY: 'legacy',
   GARMIN: 'garmin',
   SUUNTO: 'suunto',
+  STRAVA: 'strava',
   APPLE_HEALTH: 'apple_health',
   HYBRID: 'hybrid'
 });

@@ -2,8 +2,9 @@ import { PAIN_AREAS, STORES } from '../core/constants.js';
 import { createId } from '../core/id.js';
 import { localDateKey, nowIso } from '../core/date.js';
 import { escapeHtml, formatNumber, pageHeader } from './components.js';
+import { renderConnections } from './connections.js';
 
-const TABS=[['motivation','แรงใจ'],['pain','อาการเจ็บ'],['body','น้ำหนัก'],['sleep','การนอน'],['data','ข้อมูล']];
+const TABS=[['motivation','แรงใจ'],['pain','อาการเจ็บ'],['body','น้ำหนัก'],['sleep','การนอน'],['connections','เชื่อมต่อ'],['data','ข้อมูล']];
 const QUOTES=[
   'ความก้าวหน้า ไม่ใช่ความสมบูรณ์แบบ',
   'ทุกครั้งที่อยากเลิก จำว่าทำไมถึงเริ่ม',
@@ -23,6 +24,7 @@ export function renderLog(container,state,app){
   else if(tab==='pain')renderPainTab(content,state,app);
   else if(tab==='body')renderBodyTab(content,state,app);
   else if(tab==='sleep')renderSleepTab(content,state,app);
+  else if(tab==='connections')renderConnections(content,state,app,{embedded:true});
   else renderDataTab(content,state);
 }
 

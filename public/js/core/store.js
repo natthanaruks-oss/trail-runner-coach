@@ -23,6 +23,45 @@ const state = {
   dailyFlags: []
 };
 
+const STATE_KEY_BY_STORE = Object.freeze({
+  [STORES.RACES]: 'raceProfiles',
+  [STORES.PLANS]: 'trainingPlans',
+  [STORES.CHECKINS]: 'checkins',
+  [STORES.ACTIVITIES]: 'activities',
+  [STORES.PAIN]: 'painLogs',
+  [STORES.WORKOUTS]: 'workouts',
+  [STORES.REHAB]: 'rehabLogs',
+  [STORES.GEAR]: 'gear',
+  [STORES.META]: 'metadata',
+  [STORES.BODY_COMPOSITION]: 'bodyComposition',
+  [STORES.FOOD_LOGS]: 'foodLogs',
+  [STORES.CUSTOM_FOODS]: 'customFoods',
+  [STORES.WATER_LOGS]: 'waterLogs',
+  [STORES.DAILY_FLAGS]: 'dailyFlags'
+});
+
+function recordKey(storeName, record) {
+  if (storeName === STORES.CHECKINS || storeName === STORES.WATER_LOGS || storeName === STORES.DAILY_FLAGS) return record.date;
+  if (storeName === STORES.WORKOUTS) return record.planSessionId;
+  return record.id;
+}
+
+function updateStateRecord(storeName, record) {
+  const stateKey = STATE_KEY_BY_STORE[storeName];
+  if (!stateKey) return;
+  const key = recordKey(storeName, record);
+  const rows = state[stateKey];
+  const index = rows.findIndex(item => recordKey(storeName, item) === key);
+  if (index >= 0) rows[index] = structuredClone(record);
+  else rows.push(structuredClone(record));
+}
+
+function deleteStateRecord(storeName, key) {
+  const stateKey = STATE_KEY_BY_STORE[storeName];
+  if (!stateKey) return;
+  state[stateKey] = state[stateKey].filter(item => recordKey(storeName, item) !== key);
+}
+
 function deepMerge(target, source) {
   const out = structuredClone(target);
   for (const [key, value] of Object.entries(source || {})) {
@@ -126,9 +165,19 @@ export async function setActiveRace(raceId, planId = null) {
 
 export async function upsertRecord(storeName, record) {
   await db.put(storeName, record);
-  await refreshAll(); emit(); return record;
+  updateStateRecord(storeName, record);
+  emit();
+  return record;
 }
-export async function upsertMany(storeName, records) { await db.bulkPut(storeName, records); await refreshAll(); emit(); }
-export async function deleteRecord(storeName, key) { await db.remove(storeName, key); await refreshAll(); emit(); }
+export async function upsertMany(storeName, records) {
+  await db.bulkPut(storeName, records);
+  records.forEach(record => updateStateRecord(storeName, record));
+  emit();
+}
+export async function deleteRecord(storeName, key) {
+  await db.remove(storeName, key);
+  deleteStateRecord(storeName, key);
+  emit();
+}
 
 export { db };

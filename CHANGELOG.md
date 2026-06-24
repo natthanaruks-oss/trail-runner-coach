@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.3.0 — Food Expansion, Deficit Filters, Connections & Smooth UI
+
+- Added 1,375 Thai prepared foods to the existing 449-item catalog for 1,824 searchable records in total.
+- Lazy-loads the expanded dataset only when the food picker opens to limit startup cost.
+- Added Thai/English/subcategory search, new food groups and gram-based portion entry.
+- Added 7/14/30/90-day and custom date-range calorie-deficit filters.
+- Added deficit, surplus, net offset, coverage, complete-day count, average deficit and theoretical weight-trend summaries.
+- Deficit analysis now excludes incomplete food-log days and warns when data coverage is low.
+- Added a Connections center for Apple Health, Garmin, Suunto and Strava.
+- Added provider-neutral browser adapter and a random local device token.
+- Implemented Strava OAuth, token refresh, webhook and recent activity sync in the optional Worker.
+- Added secure OAuth boundaries for Garmin and Suunto pending provider approval and granted API endpoints.
+- Refactored store writes to update in-memory state without re-reading every IndexedDB store after each action.
+- Preserved scroll position on same-route updates and per-route navigation; removed unconditional scroll-to-top behavior.
+- Added stable scrollbar and reduced loading-state repaint/flicker.
+- Expanded automated verification to 18 tests and 62 public assets.
+- Bumped package, application and PWA cache version to 1.3.0.
+
 ## 1.2.1 — Typography & Bevel-inspired UI polish
 
 - Replaced the mixed Inter/fallback stack with native Apple/Thai/Windows system fonts for consistent offline rendering.

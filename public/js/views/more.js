@@ -6,7 +6,8 @@ export function renderMore(container){
     ['🍚','โภชนาการ','Fueling guideline และ Race timeline','nutrition'],
     ['🎒','Gear Checklist','อุปกรณ์กลางคืนและพึ่งพาตัวเอง','gear'],
     ['❤️','ทำไมฉันถึงวิ่ง','เหตุผลที่ต้องกลับมาอ่านตอนท้อ','motivation'],
-    ['⌁','ข้อมูล & Wearables','Apple Health, Import, Export และสถานะการเชื่อมต่อ','data'],
+    ['⌁','ข้อมูล & Wearables','Import, Export และกิจกรรมล่าสุด','data'],
+    ['◉','การเชื่อมต่อ','Apple Health, Garmin, Suunto และ Strava','connections'],
     ['⚖️','Body & InBody','Baseline, กล้ามเนื้อ และองค์ประกอบร่างกาย','body'],
     ['⚙','ตั้งค่า','Athlete baseline และ App preferences','settings']
   ];

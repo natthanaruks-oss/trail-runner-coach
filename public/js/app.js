@@ -20,6 +20,7 @@ import { renderTraining } from './views/training.js';
 import { renderFuel } from './views/fuel.js';
 import { renderLog } from './views/log.js';
 import { renderScores } from './views/scores.js';
+import { renderConnections } from './views/connections.js';
 import { installReceiver as installAppleHealthReceiver } from './adapters/apple-health.js';
 import { modalTemplate, fieldNumber, escapeHtml } from './views/components.js';
 
@@ -27,6 +28,7 @@ const view = document.querySelector('#view');
 const modal = document.querySelector('#modal');
 const modalContent = document.querySelector('#modal-content');
 const toastElement = document.querySelector('#toast');
+const scheduleFrame = globalThis.requestAnimationFrame?.bind(globalThis) || (callback => setTimeout(callback, 0));
 
 const routes = {
   today: renderDashboard,
@@ -45,7 +47,8 @@ const routes = {
   train: renderTraining,
   fuel: renderFuel,
   log: renderLog,
-  scores: renderScores
+  scores: renderScores,
+  connections: renderConnections
 };
 
 const app = {
@@ -67,6 +70,7 @@ async function start() {
     await migrateLegacyLocalStorage(store.getState().settings);
     await store.refreshAll();
     installAppleHealthReceiver();
+    if (window.history && 'scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
     bindGlobalEvents();
     render();
     registerServiceWorker();
@@ -81,13 +85,24 @@ function currentRoute() {
   return routes[route] ? route : 'today';
 }
 
-function render() {
+const routeScrollPositions = new Map();
+let renderedRoute = null;
+
+function render(options = {}) {
   const route = currentRoute();
-  const activeNav = route === 'rehab' ? 'train' : route === 'nutrition' ? 'fuel' : ['pain','body','data','settings','races','gear','motivation','more','checkin'].includes(route) ? 'log' : route === 'scores' ? 'today' : route;
+  const routeChanged = renderedRoute !== null && route !== renderedRoute;
+  const currentScroll = window.scrollY || document.documentElement.scrollTop || 0;
+  if (routeChanged && renderedRoute) routeScrollPositions.set(renderedRoute, currentScroll);
+  const targetScroll = routeChanged ? (routeScrollPositions.get(route) || 0) : currentScroll;
+  const activeNav = route === 'rehab' ? 'train' : route === 'nutrition' ? 'fuel' : ['pain','body','data','connections','settings','races','gear','motivation','more','checkin'].includes(route) ? 'log' : route === 'scores' ? 'today' : route;
   document.querySelectorAll('[data-route]').forEach(link => link.classList.toggle('active', link.dataset.route === activeNav));
+  view.setAttribute('aria-busy', 'true');
   routes[route](view, store.getState(), app);
-  view.focus({ preventScroll: true });
-  window.scrollTo({ top: 0, behavior: 'instant' });
+  renderedRoute = route;
+  scheduleFrame(() => {
+    window.scrollTo({ top: options.scrollTop ? 0 : targetScroll, behavior: 'instant' });
+    view.removeAttribute('aria-busy');
+  });
 }
 
 function bindGlobalEvents() {

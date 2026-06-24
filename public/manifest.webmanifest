@@ -1,13 +1,18 @@
 {
   "name": "Trail Runner Coach",
   "short_name": "Trail Coach",
-  "description": "Adaptive trail training, strain, recovery and multi-race planning",
+  "description": "Adaptive trail training, food logging, calorie balance, strain, recovery and wearable connections",
   "start_url": "/#/today",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0d0d0f",
   "theme_color": "#0d0d0f",
   "icons": [
-    { "src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "/assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

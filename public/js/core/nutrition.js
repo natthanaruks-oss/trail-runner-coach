@@ -102,21 +102,50 @@ export function energyBalanceForDate(state, dateKey = localDateKey()) {
 }
 
 export function energyBalanceRange(state, days = 7, endDateKey = localDateKey()) {
+  const safeDays = Math.max(1, Math.min(366, Number(days) || 7));
+  return energyBalancePeriod(state, addDays(endDateKey, -(safeDays - 1)), endDateKey);
+}
+
+export function energyBalancePeriod(state, startDateKey, endDateKey = localDateKey()) {
+  const start = normalizeDateKey(startDateKey || endDateKey);
+  const end = normalizeDateKey(endDateKey || startDateKey);
+  const [from, to] = start <= end ? [start, end] : [end, start];
+  const days = Math.min(366, daysInclusive(from, to));
   const rows = [];
-  for (let offset = days - 1; offset >= 0; offset -= 1) {
-    const date = addDays(endDateKey, -offset);
-    rows.push(energyBalanceForDate(state, date));
-  }
+  for (let offset = 0; offset < days; offset += 1) rows.push(energyBalanceForDate(state, addDays(from, offset)));
   const complete = rows.filter(row => row.foodComplete);
   const net = complete.reduce((sum,row)=>sum+row.netKcal,0);
+  const deficits = complete.filter(row => row.netKcal < 0);
+  const surpluses = complete.filter(row => row.netKcal > 0);
+  const deficitKcal = deficits.reduce((sum,row)=>sum+Math.abs(row.netKcal),0);
+  const surplusKcal = surpluses.reduce((sum,row)=>sum+row.netKcal,0);
   return {
     rows,
+    startDate: from,
+    endDate: to,
+    selectedDays: rows.length,
     completeDays: complete.length,
+    coveragePct: rows.length ? Math.round(complete.length / rows.length * 100) : 0,
+    deficitDays: deficits.length,
+    surplusDays: surpluses.length,
+    deficitKcal: Math.round(deficitKcal),
+    surplusKcal: Math.round(surplusKcal),
     netKcal: Math.round(net),
+    averageNetKcal: complete.length ? Math.round(net / complete.length) : null,
+    averageDeficitKcal: deficits.length ? Math.round(deficitKcal / deficits.length) : null,
     estimatedWeightChangeKg: +(net / 7700).toFixed(2),
     averageIntakeKcal: complete.length ? Math.round(complete.reduce((s,r)=>s+r.intakeKcal,0)/complete.length) : null,
     averageProteinG: complete.length ? Math.round(complete.reduce((s,r)=>s+r.proteinG,0)/complete.length) : null
   };
+}
+
+function normalizeDateKey(value) {
+  const match = String(value || '').match(/^\d{4}-\d{2}-\d{2}$/);
+  return match ? match[0] : localDateKey();
+}
+function daysInclusive(start, end) {
+  const ms = Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`);
+  return Math.max(1, Math.floor(ms / 86400000) + 1);
 }
 
 export function recentFoodBases(state, catalog, limit = 12) {
