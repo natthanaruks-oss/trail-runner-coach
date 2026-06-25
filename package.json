@@ -1,15 +1,17 @@
 {
   "name": "trail-runner-coach",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Local-first adaptive trail training coach with expanded Thai food logging, calorie deficit filters, strain/recovery and wearable connection architecture",
+  "description": "Local-first bilingual adaptive trail coach with wearable sync, personalized scores, progress analytics and zero-knowledge encrypted cloud backup",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",
     "test": "node --test",
     "check": "node scripts/verify.mjs && node --test",
-    "deploy:dry-run": "npx wrangler deploy --dry-run"
+    "deploy:dry-run": "npx wrangler deploy --dry-run",
+    "setup:strava": "node scripts/setup-strava.mjs",
+    "setup:backup": "node scripts/setup-cloud-backup.mjs"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.2.5",

@@ -24,7 +24,7 @@ export function renderTraining(container,state,app){
 function renderExerciseList(container,state,app,exercises,banner,category){
   const date=localDateKey();
   const doneIds=new Set(state.rehabLogs.filter(log=>log.date===date&&log.category===category).map(log=>log.exerciseId));
-  container.innerHTML=`<div class="callout good">${banner}</div><div class="list" style="margin-top:12px">${exercises.map(ex=>exerciseCard(ex,doneIds.has(ex.id))).join('')}</div>
+  container.innerHTML=`<div class="callout good">${escapeHtml(app.t(banner))}</div><div class="list" style="margin-top:12px">${exercises.map(ex=>exerciseCard(ex,doneIds.has(ex.id),app)).join('')}</div>
   <div class="callout section">การบันทึก “ทำแล้ว” เป็น log ประจำวัน ไม่ใช่คำสั่งให้ทำทุกท่าพร้อมกัน เลือกตาม Phase, อาการ และเวลาที่มี</div>`;
   container.querySelectorAll('[data-toggle-exercise]').forEach(button=>button.addEventListener('click',async()=>{
     const exerciseId=button.dataset.toggleExercise;
@@ -34,9 +34,9 @@ function renderExerciseList(container,state,app,exercises,banner,category){
     app.render();
   }));
 }
-function exerciseCard(ex,done){
-  const target=ex.target||''; const prescription=ex.prescription||''; const cues=ex.cues||[]; const query=ex.query||`${ex.name} exercise form`;
-  return `<article class="card flat exercise-card ${done?'completed':''}"><button class="exercise-check ${done?'done':''}" data-toggle-exercise="${ex.id}" aria-label="${done?'ยกเลิก':'ทำแล้ว'}">${done?'✓':'○'}</button><div class="grow"><div class="exercise-title">${ex.priority==='high'?'<span>★</span> ':''}${escapeHtml(ex.name)}</div><div class="submetric">${escapeHtml(target)}</div><strong class="exercise-dose">${escapeHtml(prescription)}</strong>${cues.length?`<details><summary>วิธีทำและจุดโฟกัส</summary><ul>${cues.map(c=>`<li>${escapeHtml(c)}</li>`).join('')}</ul>${ex.stopIf?`<div class="callout danger">หยุดเมื่อ: ${escapeHtml(ex.stopIf)}</div>`:''}</details>`:''}</div><a class="mini-link" href="https://www.youtube.com/results?search_query=${encodeURIComponent(query)}" target="_blank" rel="noopener">ดูท่า</a></article>`;
+function exerciseCard(ex,done,app){
+  const target=app.t(ex.target||''); const prescription=app.t(ex.prescription||''); const cues=(ex.cues||[]).map(cue=>app.t(cue)); const query=ex.query||`${ex.name} exercise form`;
+  return `<article class="card flat exercise-card ${done?'completed':''}"><button class="exercise-check ${done?'done':''}" data-toggle-exercise="${ex.id}" aria-label="${done?'ยกเลิก':'ทำแล้ว'}">${done?'✓':'○'}</button><div class="grow"><div class="exercise-title">${ex.priority==='high'?'<span>★</span> ':''}${escapeHtml(ex.name)}</div><div class="submetric">${escapeHtml(target)}</div><strong class="exercise-dose">${escapeHtml(prescription)}</strong>${cues.length?`<details><summary>วิธีทำและจุดโฟกัส</summary><ul>${cues.map(c=>`<li>${escapeHtml(c)}</li>`).join('')}</ul>${ex.stopIf?`<div class="callout danger">${escapeHtml(app.t('หยุดเมื่อ:'))} ${escapeHtml(app.t(ex.stopIf))}</div>`:''}</details>`:''}</div><a class="mini-link" href="https://www.youtube.com/results?search_query=${encodeURIComponent(query)}" target="_blank" rel="noopener">ดูท่า</a></article>`;
 }
 function renderEquipment(container,state,app){
   const owned=new Set(state.gear.filter(item=>item.context==='home_training'&&item.owned).map(item=>item.id));

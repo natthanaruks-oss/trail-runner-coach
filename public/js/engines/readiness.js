@@ -1,6 +1,7 @@
 import { calculateRecovery } from './recovery.js';
 import { calculateBehaviorLoad, calculateDailyStrain, calculateLoadTrend, strainWindow } from './strain.js';
 import { addDays, localDateKey } from '../core/date.js';
+import { applyReadinessCalibration } from './calibration.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -45,16 +46,16 @@ export function evaluatePainSafety(checkin, painLogs = [], dateKey = localDateKe
   };
 }
 
-export function calculateReadiness({ checkin, checkinHistory = [], activities = [], painLogs = [], settings = {}, dateKey = localDateKey() }) {
+export function calculateReadiness({ checkin, checkinHistory = [], activities = [], painLogs = [], settings = {}, calibration = null, dateKey = localDateKey() }) {
   const priorCheckins = checkinHistory.filter(item => item.date < dateKey);
   const previousDate = addDays(dateKey, -1);
   const previousDayCheckin = checkinHistory.find(item => item.date === previousDate) || null;
-  const previousDayStrain = calculateDailyStrain(activities, previousDate, previousDayCheckin, priorCheckins.filter(item => item.date < previousDate));
-  const recentStrain = strainWindow(activities, checkinHistory, previousDate, 3);
+  const previousDayStrain = calculateDailyStrain(activities, previousDate, previousDayCheckin, priorCheckins.filter(item => item.date < previousDate), calibration);
+  const recentStrain = strainWindow(activities, checkinHistory, previousDate, 3, calibration);
   const recovery = calculateRecovery(checkin, settings, checkinHistory, {
     previousDayStrain,
     recentStrainAverage: recentStrain.averageScore
-  });
+  }, calibration);
   const subjectiveComplete = Boolean(
     Number.isFinite(Number(checkin?.fatigue)) &&
     Number.isFinite(Number(checkin?.stress)) &&
@@ -66,7 +67,9 @@ export function calculateReadiness({ checkin, checkinHistory = [], activities = 
   const behaviorLoad = calculateBehaviorLoad(previousDayCheckin, priorCheckins);
   const trendPenalty = trend.warning.level === 'high' ? 10 : trend.warning.level === 'moderate' ? 5 : 0;
   const recoveryBase = recovery.score ?? 58;
-  let score = recoveryBase * 0.82 + pain.score * 0.18 - trendPenalty;
+  const rawScore = recoveryBase * 0.82 + pain.score * 0.18 - trendPenalty;
+  const calibratedPreSafety = applyReadinessCalibration(rawScore, calibration);
+  let score = calibratedPreSafety;
 
   const flags = [...recovery.flags, ...pain.flags, ...behaviorLoad.flags];
   if (trend.warning.level === 'high') flags.push('rapid_load_increase');
@@ -98,6 +101,9 @@ export function calculateReadiness({ checkin, checkinHistory = [], activities = 
   return {
     date: dateKey,
     score,
+    rawScore: Math.round(clamp(rawScore, 0, 100)),
+    calibrationAdjustment: Math.round(calibratedPreSafety - clamp(rawScore, 0, 100)),
+    calibration: calibration ? { phase: calibration.phase, confidence: calibration.confidence, readinessBias: calibration.readinessBias, strainBias: calibration.strainBias } : null,
     status,
     confidence,
     recovery,

@@ -1,0 +1,14 @@
+{
+  "name": "trail-runner-coach-wearable-sync-test",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-25",
+  "vars": {
+    "APP_ORIGIN": "https://example.com",
+    "STRAVA_SCOPES": "read,activity:read_all"
+  },
+  "kv_namespaces": [
+    {"binding": "OAUTH_STATE", "id": "11111111111111111111111111111111"},
+    {"binding": "WEARABLE_TOKENS", "id": "22222222222222222222222222222222"},
+    {"binding": "WEARABLE_EVENTS", "id": "33333333333333333333333333333333"}
+  ]
+}

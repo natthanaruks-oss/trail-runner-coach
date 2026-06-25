@@ -1,5 +1,104 @@
 # Changelog
 
+## 2.0.0 — Encrypted Cloud Backup
+
+- Added a zero-knowledge encrypted cloud-backup route and bilingual setup workflow.
+- Added client-side PBKDF2-SHA-256 key derivation, AES-GCM-256 encryption, gzip compression when available, and plaintext SHA-256 verification.
+- Added versioned Cloudflare KV storage with hashed access tokens, retention pruning, no-store responses, and a 12 MiB encrypted payload limit.
+- Added `npm run setup:backup` to create KV bindings, deploy the backup Worker, and generate a secret-free setup receipt.
+- Added Recovery Kit export/import for connecting a new device without storing the passphrase.
+- Added manual backup, encrypted version listing, local decryption, record preview, Merge restore, Replace restore, version deletion, device disconnect, and permanent vault deletion.
+- Added optional automatic backup while the app is open and the remembered local key is available.
+- Added dedicated crypto, setup, Worker API, bilingual UI, and browser integration tests.
+- Preserved IndexedDB schema version 4 and all previous food, plan, wearable, calibration, progress, and local JSON backup workflows.
+- Bumped package, app, and PWA cache versions to 2.0.0.
+
+## 1.9.0 — Progress Dashboard
+
+- Added a bilingual filterable Progress Dashboard for 7, 28, 90-day and custom date ranges up to 366 days.
+- Added equal-length previous-period comparisons for distance, elevation, duration, adherence, scores, pain and energy balance.
+- Added consolidated training metrics for run/walk/hike distance, vertical gain/loss, duration, active days, trail sessions and night runs.
+- Added planned-versus-actual distance and vertical charts using the active training plan and deduplicated activities.
+- Added normalized Strain, Recovery and Readiness trend visualization with Green/Yellow/Red day counts.
+- Added Pain/Niggle trend, hard-stop detection, worst-area summary and period-half trend comparison.
+- Added complete-day calorie balance, coverage and average deficit/surplus context.
+- Added explainable progress insights and a transparent data-coverage confidence indicator.
+- Excluded cycling and strength distance from trail-running volume totals while keeping their duration in total training time.
+- Added Progress access from Today and Log without changing the five-item bottom navigation.
+- Added three dedicated progress-engine tests and expanded the full automated suite to 45/45.
+- Preserved IndexedDB schema version 4 and all existing food, sync, calibration, deduplication and bilingual workflows.
+- Bumped package, application and PWA cache version to 1.9.0.
+
+## 1.8.0 — Personal Score Calibration
+
+- Added a daily 30-second calibration feedback loop for perceived readiness, perceived Strain and session outcome.
+- Added guarded calibration phases: Bootstrap (0–6 usable days), Learning (7–20) and Personalized (21+).
+- Added bounded Readiness bias correction (±10 points) and Strain correction (±2.5 on the 0–21 scale).
+- Added feedback-derived Recovery component weight modifiers constrained to ±15%.
+- Added rolling robust RHR and HRV baselines using median and MAD-based spread, reducing sensitivity to single-day outliers.
+- Applied feedback only to future scores, preventing same-day self-fitting.
+- Preserved Pain/Illness Safety Gates above all personalization and prevented calibration from overriding Red conditions.
+- Added calibration phase, confidence, baseline ranges, learned factor weights and feedback history to the score page.
+- Stored calibration feedback in the existing metadata store; IndexedDB remains schema version 4.
+- Added six calibration tests and expanded the complete automated suite to 42/42.
+- Preserved all food, calorie, training, bilingual, sync, deduplication and legacy workflows.
+- Bumped package, application and PWA cache version to 1.8.0.
+
+## 1.7.0 — Auto Sync Status, Last Sync & Retry Queue
+
+- Added a persistent provider-sync state model for Apple Health, Garmin, Suunto and Strava.
+- Added automatic sync checks on app open, online recovery, tab visibility and window focus.
+- Added user-selectable 15/30/60/120-minute auto-sync intervals.
+- Added Last Attempt, Last Success, Last Failure, Last Result and next retry visibility per provider.
+- Added a persistent retry queue with 1m/5m/15m/1h/6h backoff and a five-attempt manual-attention boundary.
+- Added Retry-After support for provider rate limits and Worker responses.
+- Added Sync All, Retry Now and Clear Queue controls.
+- Prevented retries for disconnected, authorization and pending-provider-adapter errors.
+- Routed every retry through the cross-provider deduplication pipeline.
+- Added dedicated sync-manager tests; full automated suite is now 36/36.
+- Preserved IndexedDB schema version 4 and all v1.6 features.
+- Bumped package, app, Worker and PWA cache versions to 1.7.0.
+
+## 1.6.0 — Cross-provider Activity Deduplication
+
+- Added provider-neutral activity identity normalization with persistent source provenance.
+- Added exact update matching by provider plus external activity ID.
+- Added high-confidence cross-provider matching using start time, duration, distance, activity type and average heart rate.
+- Added field-level merge priorities so useful metrics are combined instead of one provider blindly overwriting another.
+- Added Canonical Activity records with `sources`, `externalRefs`, fingerprint and merge metadata.
+- Added a safe review queue for uncertain matches with user actions to merge or keep records separate.
+- Added one-time reconciliation for historical activities and automatic deduplication during Apple Health, cloud-provider and file imports.
+- Added Activity Integrity status to Data & Wearables.
+- Added seven dedicated deduplication tests; complete automated suite is now 32/32.
+- Preserved all v1.5 Strava Wizard, bilingual, food, calorie, training and Strain/Recovery workflows.
+- Kept IndexedDB schema version 4 and bumped application/PWA cache version to 1.6.0.
+
+## 1.5.0 — Strava Setup Wizard
+
+- Added a four-stage bilingual Strava Setup Wizard under Connections.
+- Added callback-domain prediction for Cloudflare workers.dev deployments.
+- Added `npm run setup:strava` to automate Cloudflare login, KV creation/binding, secure secret upload and Worker deployment.
+- Added a secret-free `strava-setup-result.json` receipt that can be imported into the web app.
+- Added `/setup/status` to validate App Origin, KV bindings, required Strava secrets and overall readiness without exposing credentials.
+- Added copy controls for callback domain, callback URL and the setup command.
+- Added required-secret declarations to the optional wearable Worker configuration.
+- Added automated tests for config generation, receipt safety, deployed URL parsing and secret-safe setup status.
+- Preserved all v1.4 food, calorie, strain/recovery, bilingual, training and legacy workflows.
+- Kept IndexedDB schema version 4 and bumped application/PWA cache version to 1.5.0.
+
+## 1.4.0 — Thai / English Bilingual UI
+
+- Added persistent Thai/English language switching from the header and Settings.
+- Localized the five primary workflows and all supporting routes, including forms, dialogs, status messages, safety warnings, rehab cues, nutrition guidance, gear and wearable setup.
+- Added language-aware date and number formatting.
+- Added bilingual food handling with `nameTh` / `nameEn` and safe fallback for custom foods.
+- Added centralized `core/i18n.js` helpers for static strings, dynamic patterns and structured bilingual fields.
+- Prevented unsafe partial word replacement that could create mixed Thai/English sentences.
+- Preserved user-entered notes and motivation text in the language originally entered.
+- Added bilingual browser integration coverage and dedicated i18n unit tests.
+- Kept IndexedDB schema version 4 so existing local data remains available.
+- Bumped package, application and PWA cache version to 1.4.0.
+
 ## 1.3.0 — Food Expansion, Deficit Filters, Connections & Smooth UI
 
 - Added 1,375 Thai prepared foods to the existing 449-item catalog for 1,824 searchable records in total.

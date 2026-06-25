@@ -1,49 +1,59 @@
 # Wearable Sync Worker
 
-Optional OAuth/webhook boundary for Garmin, Suunto and Strava. Apple Health remains a native HealthKit bridge and does not use this Worker.
+OAuth and webhook boundary for Strava, with provider boundaries reserved for Garmin and Suunto. Apple Health remains a native HealthKit integration and does not use this Worker.
 
-## Security model
+## Recommended Strava setup
 
-- Provider client secrets and refresh tokens never enter `public/`.
-- OAuth tokens are encrypted with AES-GCM before storage in Cloudflare KV.
-- The browser owns a random 256-bit device token. The Worker stores only its SHA-256 hash.
-- This is suitable for a personal/single-user prototype. Add a real account/login layer before a multi-user public launch.
+From the repository root:
 
-## Setup
+```bash
+npm run setup:strava
+```
 
-1. Create three KV namespaces and copy `wrangler.example.jsonc` to `wrangler.jsonc`.
-2. Set secrets:
+The setup wizard creates the three KV namespaces, writes the local Worker config, uploads required secrets, deploys the Worker, and creates `strava-setup-result.json` for import into the web app.
+
+Full instructions: `docs/STRAVA_SETUP_WIZARD.md`.
+
+## Manual setup fallback
+
+1. Copy `wrangler.example.jsonc` to `wrangler.jsonc`.
+2. Create and bind:
+   - `OAUTH_STATE`
+   - `WEARABLE_TOKENS`
+   - `WEARABLE_EVENTS`
+3. Configure required secrets:
 
 ```bash
 npx wrangler secret put TOKEN_ENCRYPTION_KEY
 npx wrangler secret put STRAVA_CLIENT_ID
 npx wrangler secret put STRAVA_CLIENT_SECRET
 npx wrangler secret put STRAVA_VERIFY_TOKEN
-npx wrangler secret put GARMIN_CLIENT_ID
-npx wrangler secret put GARMIN_CLIENT_SECRET
-npx wrangler secret put SUUNTO_CLIENT_ID
-npx wrangler secret put SUUNTO_CLIENT_SECRET
 ```
 
-3. Deploy the Worker and paste its URL into **บันทึก → เชื่อมต่อ** in the app.
-4. Register callback URLs:
+4. Deploy:
+
+```bash
+npx wrangler deploy --config workers/wearable-sync/wrangler.jsonc
+```
+
+## Endpoints
 
 ```text
-https://YOUR-WORKER/oauth/strava/callback
-https://YOUR-WORKER/oauth/garmin/callback
-https://YOUR-WORKER/oauth/suunto/callback
+GET  /health
+GET  /setup/status
+GET  /oauth/strava/start
+GET  /oauth/strava/callback
+GET  /api/connections
+POST /api/sync/strava
+DELETE /api/connections/strava
+GET  /webhooks/strava
+POST /webhooks/strava
 ```
 
-5. Register webhook URLs:
+## Security model
 
-```text
-https://YOUR-WORKER/webhooks/strava
-https://YOUR-WORKER/webhooks/garmin
-https://YOUR-WORKER/webhooks/suunto
-```
-
-## Current adapter status
-
-- Strava OAuth, token refresh and recent activity import are implemented.
-- Garmin OAuth boundary is ready; activity/health endpoint mapping must use the documentation and scopes granted to the approved developer account.
-- Suunto OAuth boundary is ready; workout/FIT endpoint mapping must use the partner account documentation.
+- Client secrets and refresh tokens never enter `public/`.
+- OAuth tokens are encrypted with AES-GCM before Cloudflare KV storage.
+- The browser owns a random 256-bit device token; the Worker uses its SHA-256 hash.
+- `/setup/status` exposes readiness booleans only, never credential values.
+- The current device-token design is suitable for a personal prototype. Add authenticated user accounts before a public multi-user launch.

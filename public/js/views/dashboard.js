@@ -27,7 +27,7 @@ export function renderDashboard(container, state, app) {
     <section class="card hero">
       <div>
         ${statusBadge(readinessStatus, readinessLabel)}
-        <h2 style="font-size:24px;margin:12px 0 6px">${escapeHtml(session?.title?.th || 'อยู่นอกช่วงแผน')}</h2>
+        <h2 style="font-size:24px;margin:12px 0 6px">${escapeHtml(session ? (app.field(session, 'title') || session.t) : 'อยู่นอกช่วงแผน')}</h2>
         <div style="color:var(--muted);font-size:12px">${escapeHtml(session?.t || 'Rest')} ${session?.km ? `· ${session.km} km · +${session.vert || 0} m` : ''}</div>
         <div class="callout ${today.readiness?.status === 'red' ? 'danger' : today.readiness?.status === 'green' ? 'good' : ''}" style="margin-top:14px">
           <strong>${escapeHtml(recommendation.intensity)}</strong><br>
@@ -103,6 +103,7 @@ export function renderDashboard(container, state, app) {
           <div><div class="card-title">Vertical จริง/แผน</div><div class="metric" style="font-size:23px">${formatNumber(week.actualElevationGainM)}<small>/ ${formatNumber(week.elevationGainM)} m</small></div></div>
           <div><div class="card-title">Phase</div><div class="metric" style="font-size:20px">${escapeHtml(today.plan.week?.phase || '—')}</div></div>
         </div>
+        <div class="button-row" style="margin-top:14px"><a class="button secondary" href="#/progress">เปิด Progress Dashboard</a></div>
       </article>
     </section>
 

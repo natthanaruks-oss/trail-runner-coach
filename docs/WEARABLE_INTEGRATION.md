@@ -50,13 +50,15 @@ Implemented in Worker:
 - recent activity retrieval
 - conversion into Trail Runner Coach activity records
 
-Required setup:
+Recommended setup:
 
-1. Register a Strava API application.
-2. Add Worker callback domain to the application settings.
-3. Create KV namespaces.
-4. Set `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_VERIFY_TOKEN` and `TOKEN_ENCRYPTION_KEY` as Worker secrets.
-5. Deploy Worker and enter its URL in **บันทึก → เชื่อมต่อ**.
+1. Open **บันทึก → เชื่อมต่อ → Strava Setup Wizard**.
+2. Register a Strava API application and use the callback domain shown by the wizard.
+3. Run `npm run setup:strava` from the project root.
+4. Import the generated `strava-setup-result.json` into the wizard.
+5. Run the readiness check and select **Connect Strava** when all checks are green.
+
+The command automates KV creation, required secrets and Worker deployment. Manual setup remains documented under `workers/wearable-sync/README.md`.
 
 ## Garmin
 
@@ -91,7 +93,7 @@ Recommended precedence:
 3. Strava as activity fallback/secondary social source.
 4. Manual or file import when a provider is unavailable.
 
-Deduplicate using provider + external activity ID first, then start time/duration/distance fingerprint. Keep source metadata so a user can see where each value came from.
+Version 1.6.0 implements this policy: provider + external activity ID is checked first, then start time, duration, distance, activity type and average HR are scored across providers. High-confidence matches merge into one canonical activity; uncertain matches remain separate for user review. `sources[]` and `externalRefs[]` preserve traceability. See `ACTIVITY_DEDUP.md`.
 
 ## Operational status
 
@@ -101,3 +103,8 @@ Deduplicate using provider + external activity ID first, then start time/duratio
 | Strava | Ready | Implemented | Recent activities implemented | API credentials + Worker deploy |
 | Garmin | Ready | Implemented boundary | Pending | Developer Program approval |
 | Suunto | Ready | Implemented boundary | Pending | Partner approval |
+
+
+## v1.7 Sync lifecycle
+
+Version 1.7.0 adds client-side auto-sync status and a persistent retry queue. Temporary network, rate-limit and server failures retry with backoff while authorization, disconnected-provider and pending-adapter errors require user action. Last successful data remains visible even after a later failed attempt. See `SYNC_LIFECYCLE.md`.

@@ -1,6 +1,10 @@
 # Wearable roadmap
 
-## Implemented in 1.3.0
+## Implemented through 1.7.0
+
+- Persistent provider status, last-sync visibility and retry queue
+- Automatic checks on app open, online recovery, visibility and focus
+- Cross-provider activity deduplication and review workflow
 
 - Provider-neutral normalized health/activity records.
 - Apple Health JavaScript adapter and SwiftUI/HealthKit companion source.
@@ -10,15 +14,17 @@
 - Garmin/Suunto secure connection boundary pending approved API access.
 - GPX, TCX, CSV and JSON activity import.
 - Data-confidence handling when subjective safety inputs are missing.
+- Guided Strava setup with one-command Worker/KV/secret deployment.
+- Cross-provider canonical activity records with exact-ID updates, confidence scoring, review queue and historical reconciliation.
 
 ## Next delivery order
 
 1. Test Apple Health companion on a physical iPhone and implement anchored incremental sync.
-2. Deploy Strava Worker with personal API credentials and validate duplicate handling.
-3. Apply to Garmin Connect Developer Program; implement Health and Activity adapters after approval.
-4. Apply to Suunto Partner Program; implement workout summary/FIT adapter after approval.
-5. Add connection health, last-sync timestamp, retry queue and provider-specific diagnostics.
-6. Add optional encrypted cross-device sync only with explicit consent.
+2. Add connection health, automatic last-sync status, retry queue and provider-specific diagnostics.
+3. Calibrate Strain/Recovery scoring from real athlete data and baseline maturity.
+4. Add a multi-week progress dashboard for distance, vertical, strain, recovery, pain and energy balance.
+5. Add optional encrypted cross-device backup only with explicit consent.
+6. Apply to Garmin/Suunto programs and enable direct adapters after approval.
 
 ## Guardrails
 

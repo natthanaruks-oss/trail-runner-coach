@@ -1,11 +1,14 @@
 import { calculateReadiness } from '../engines/readiness.js';
 import { calculateDailyStrain, calculateLoadTrend, dailyLoad } from '../engines/strain.js';
+import { buildCalibrationProfile } from '../engines/calibration.js';
 import { getPlanContext, plannedTotals } from './plan.js';
 import { getActiveRace, getActivePlan } from './races.js';
 import { addDays, dateRange, daysBetween, localDateKey } from './date.js';
 
 export function selectToday(state, dateKey = localDateKey()) {
   const checkin = state.checkins.find(item => item.date === dateKey) || null;
+  // Today's feedback starts influencing tomorrow. This avoids tuning a score against itself.
+  const calibration = buildCalibrationProfile(state, dateKey);
   const plan = getPlanContext(state, dateKey);
   const race = getActiveRace(state);
   const readiness = checkin ? calculateReadiness({
@@ -14,30 +17,34 @@ export function selectToday(state, dateKey = localDateKey()) {
     activities: state.activities,
     painLogs: state.painLogs,
     settings: state.settings,
+    calibration,
     dateKey
   }) : null;
   const load = dailyLoad(state.activities, dateKey);
-  const strain = calculateDailyStrain(state.activities, dateKey, checkin, state.checkins.filter(item => item.date < dateKey));
+  const strain = calculateDailyStrain(state.activities, dateKey, checkin, state.checkins.filter(item => item.date < dateKey), calibration);
   const loadTrend = calculateLoadTrend(state.activities, dateKey);
-  return { dateKey, checkin, plan, race, readiness, recovery: readiness?.recovery || null, strain, load, loadTrend };
+  return { dateKey, checkin, plan, race, readiness, recovery: readiness?.recovery || null, strain, load, loadTrend, calibration };
 }
 
 export function selectScoreHistory(state, days = 14, endDateKey = localDateKey()) {
   return dateRange(endDateKey, days).map(dateKey => {
     const checkin = state.checkins.find(item => item.date === dateKey) || null;
+    const calibration = buildCalibrationProfile(state, dateKey);
     const readiness = checkin ? calculateReadiness({
       checkin,
       checkinHistory: state.checkins.filter(item => item.date <= dateKey),
       activities: state.activities.filter(item => item.date <= dateKey),
       painLogs: state.painLogs.filter(item => item.date <= dateKey),
       settings: state.settings,
+      calibration,
       dateKey
     }) : null;
     const strain = calculateDailyStrain(
       state.activities.filter(item => item.date <= dateKey),
       dateKey,
       checkin,
-      state.checkins.filter(item => item.date < dateKey)
+      state.checkins.filter(item => item.date < dateKey),
+      calibration
     );
     return {
       date: dateKey,
@@ -45,7 +52,8 @@ export function selectScoreHistory(state, days = 14, endDateKey = localDateKey()
       strainConfidence: strain.confidence,
       recovery: readiness?.recovery?.score ?? null,
       readiness: readiness?.score ?? null,
-      status: readiness?.status || 'unknown'
+      status: readiness?.status || 'unknown',
+      calibrationPhase: calibration.phase
     };
   });
 }

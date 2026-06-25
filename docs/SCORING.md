@@ -82,3 +82,34 @@ Every score includes Data Confidence and drivers. Confidence reflects:
 - Data source such as Apple Health, import or manual entry
 
 The score detail page shows positive and negative drivers, 14-day trends and baseline maturity.
+
+## Personal calibration — v1.8
+
+Calibration learns only from explicit user feedback and uses guarded limits. It does not train a black-box medical model.
+
+### Feedback fields
+
+- Actual readiness: 1–5, mapped to 15/35/55/75/95
+- Perceived total Strain: optional 0–21
+- Session outcome: rest/not trained, easier, as expected, harder, or stopped
+- Optional notes
+
+The score snapshot shown on the feedback date is stored with the answer. Feedback from a date begins affecting the next date, avoiding same-day self-fitting.
+
+### Learning phases
+
+- **Bootstrap (0–6 usable readiness days):** scores remain close to the transparent base formula.
+- **Learning (7–20):** small, shrinkage-limited adjustments begin.
+- **Personalized (21+):** full bounded calibration is allowed and continues to update gradually.
+
+### Guardrails
+
+- Readiness correction is capped at ±10 points.
+- Strain correction is capped at ±2.5 on the 0–21 scale.
+- Recovery component weights can move only between 0.85× and 1.15× their base weight.
+- Pain, illness, walking pain, altered gait, swelling and dizziness caps are applied after calibration. Calibration can never turn a safety Red into Green.
+- Calibration can be disabled or reset without deleting workouts, health metrics, food logs or pain history.
+
+### Robust personal baselines
+
+RHR uses up to 28 recent values and HRV up to 42. A median and median-absolute-deviation spread are used, with safe minimum spreads. After enough history, deviations are interpreted against the athlete's own normal variability rather than only fixed population-style percentage bands.

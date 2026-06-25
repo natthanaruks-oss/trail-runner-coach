@@ -23,8 +23,39 @@ export const PROVIDER_DEFINITIONS = Object.freeze({
   }
 });
 
+export function normalizeSyncBaseUrl(value) {
+  const input = String(value || '').trim().replace(/\/$/, '');
+  if (!input) return '';
+  let url;
+  try { url = new URL(input); } catch { throw new Error('Worker URL ไม่ถูกต้อง'); }
+  if (url.protocol !== 'https:') throw new Error('Worker URL ต้องใช้ https://');
+  return url.origin;
+}
+
 export function getSyncBaseUrl(settings) {
-  return String(settings?.integrations?.syncBaseUrl || '').trim().replace(/\/$/, '');
+  const value = String(settings?.integrations?.syncBaseUrl || '').trim();
+  return value ? normalizeSyncBaseUrl(value) : '';
+}
+
+export function getStravaSetupDetails(value) {
+  const workerUrl = normalizeSyncBaseUrl(value);
+  if (!workerUrl) return null;
+  const url = new URL(workerUrl);
+  return {
+    workerUrl,
+    callbackDomain: url.host,
+    callbackUrl: `${workerUrl}/oauth/strava/callback`,
+    webhookUrl: `${workerUrl}/webhooks/strava`
+  };
+}
+
+export function parseStravaSetupReceipt(value) {
+  const receipt = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!receipt || receipt.provider !== 'strava' || Number(receipt.schemaVersion) !== 1) {
+    throw new Error('ไฟล์ Strava setup ไม่ถูกต้อง');
+  }
+  const details = getStravaSetupDetails(receipt.workerUrl);
+  return { ...receipt, ...details };
 }
 
 export function getDeviceToken() {
@@ -37,13 +68,25 @@ export function getDeviceToken() {
   return value;
 }
 
+export async function fetchProviderSetupStatus(settings) {
+  const baseUrl = getSyncBaseUrl(settings);
+  if (!baseUrl) throw new Error('ยังไม่ได้ตั้งค่า Wearable Sync Worker URL');
+  const response = await fetch(`${baseUrl}/setup/status`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.message || `ตรวจ Strava setup ไม่สำเร็จ (${response.status})`);
+  return payload;
+}
+
 export async function fetchProviderConnections(settings) {
   const baseUrl = getSyncBaseUrl(settings);
   if (!baseUrl) return { configured: false, providers: {} };
   const response = await fetch(`${baseUrl}/api/connections`, {
     headers: { Authorization: `Bearer ${getDeviceToken()}` }
   });
-  if (!response.ok) throw new Error(`อ่านสถานะการเชื่อมต่อไม่สำเร็จ (${response.status})`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw createProviderError(payload.message || `อ่านสถานะการเชื่อมต่อไม่สำเร็จ (${response.status})`, response, payload);
+  }
   return { configured: true, ...(await response.json()) };
 }
 
@@ -65,7 +108,10 @@ export async function disconnectProvider(provider, settings) {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${getDeviceToken()}` }
   });
-  if (!response.ok) throw new Error(`ยกเลิกการเชื่อมต่อไม่สำเร็จ (${response.status})`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw createProviderError(payload.message || `ยกเลิกการเชื่อมต่อไม่สำเร็จ (${response.status})`, response, payload);
+  }
   return response.json();
 }
 
@@ -77,6 +123,19 @@ export async function syncProviderActivities(provider, settings, days = 90) {
     headers: { Authorization: `Bearer ${getDeviceToken()}` }
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.message || `Sync ${provider} ไม่สำเร็จ (${response.status})`);
+  if (!response.ok) throw createProviderError(payload.message || `Sync ${provider} ไม่สำเร็จ (${response.status})`, response, payload);
   return payload;
+}
+
+function createProviderError(message, response, payload = {}) {
+  const error = new Error(message);
+  error.status = Number(response?.status || 0);
+  error.code = payload?.code || null;
+  const retryAfter = response?.headers?.get?.('retry-after');
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    const dateMs = Date.parse(retryAfter);
+    error.retryAfterMs = Number.isFinite(seconds) ? seconds * 1000 : (Number.isFinite(dateMs) ? Math.max(0, dateMs - Date.now()) : null);
+  }
+  return error;
 }

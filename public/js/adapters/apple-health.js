@@ -1,5 +1,6 @@
 import { STORES } from '../core/constants.js';
 import { nowIso } from '../core/date.js';
+import { importActivitiesWithDedup } from './activity-import.js';
 
 const BRIDGE_HANDLER = 'trailRunnerHealthKit';
 const DEFAULT_TIMEOUT_MS = 120000;
@@ -140,7 +141,9 @@ export async function importAppleHealthPayload(appStore, payload) {
   ));
 
   if (mergedCheckins.length) await appStore.upsertMany(STORES.CHECKINS, mergedCheckins);
-  if (normalized.activities.length) await appStore.upsertMany(STORES.ACTIVITIES, normalized.activities);
+  const activityImport = normalized.activities.length
+    ? await importActivitiesWithDedup(appStore, normalized.activities, { provider: 'apple_health' })
+    : { added: 0, updated: 0, merged: 0, review: 0 };
   if (normalized.bodyComposition.length) await appStore.upsertMany(STORES.BODY_COMPOSITION, normalized.bodyComposition);
 
   await appStore.upsertRecord(STORES.META, {
@@ -154,12 +157,14 @@ export async function importAppleHealthPayload(appStore, payload) {
       activities: normalized.activities.length,
       bodyComposition: normalized.bodyComposition.length
     },
+    activityImport,
     schemaVersion: payload.schemaVersion || 1
   });
 
   return {
     checkins: normalized.checkins.length,
     activities: normalized.activities.length,
+    activityImport,
     bodyComposition: normalized.bodyComposition.length,
     exportedAt: normalized.exportedAt
   };

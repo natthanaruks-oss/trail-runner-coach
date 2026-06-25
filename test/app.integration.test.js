@@ -39,6 +39,7 @@ test('application initializes the multi-race IndexedDB model and renders primary
   for (const [route, expected] of [
     ['plan', 'แผนซ้อม'],
     ['scores', 'Strain & Recovery'],
+    ['progress', 'แดชบอร์ดความก้าวหน้า'],
     ['checkin', 'Daily Readiness Check'],
     ['rehab', 'Rehab & Prehab'],
     ['pain', 'Niggle / Pain Log'],
@@ -46,6 +47,7 @@ test('application initializes the multi-race IndexedDB model and renders primary
     ['gear', 'Gear Checklist'],
     ['data', 'ข้อมูล & Wearables'],
     ['connections', 'การเชื่อมต่อ'],
+    ['cloud-backup', 'Encrypted Cloud Backup'],
     ['body', 'Body & InBody'],
     ['races', 'สนามเป้าหมาย'],
     ['settings', 'ตั้งค่า'],
@@ -131,6 +133,75 @@ test('application initializes the multi-race IndexedDB model and renders primary
   dom.window.document.querySelector('#checkin-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
   await waitFor(() => dom.window.document.querySelector('#checkin-result .metric')?.textContent.includes('/100'));
   assert.ok(dom.window.document.querySelector('#checkin-result').textContent.includes('พักและประเมินอาการ'));
+
+  dom.window.location.hash = '#/scores';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.querySelector('#calibration-feedback-form'));
+  assert.ok(dom.window.document.body.textContent.includes('Personal Score Calibration'));
+  dom.window.document.querySelector('[name="actualReadiness"][value="2"]').checked = true;
+  dom.window.document.querySelector('[name="perceivedStrain"]').value = '9.5';
+  dom.window.document.querySelector('#calibration-feedback-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(() => dom.window.document.querySelector('[data-edit-calibration-date]'));
+  assert.ok(dom.window.document.querySelector('[data-edit-calibration-date]').closest('.list-item').textContent.includes('35/100'));
+
+  // Thai/English switch updates the shell, routes and persists through Settings.
+  dom.window.document.querySelector('#language-toggle').click();
+  await waitFor(() => dom.window.document.documentElement.lang === 'en');
+  await waitFor(() => dom.window.document.querySelector('[data-route="today"] small')?.textContent === 'Today');
+  assert.equal(dom.window.document.querySelector('[data-route="plan"] small').textContent, 'Plan');
+  assert.equal(dom.window.document.querySelector('[data-route="train"] small').textContent, 'Train');
+  assert.equal(dom.window.document.querySelector('[data-route="fuel"] small').textContent, 'Food');
+  assert.equal(dom.window.document.querySelector('[data-route="log"] small').textContent, 'Log');
+
+  dom.window.location.hash = '#/plan';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.querySelector('h1')?.textContent.includes('Training Plan'));
+  assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
+
+  dom.window.location.hash = '#/scores';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.body.textContent.includes('Personal Score Calibration'));
+  assert.ok(dom.window.document.body.textContent.includes('Learn from how your body actually feels'));
+  assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
+
+  dom.window.location.hash = '#/progress';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.querySelector('h1')?.textContent.includes('Progress Dashboard'));
+  assert.ok(dom.window.document.body.textContent.includes('Actual vs planned distance'));
+  assert.ok(dom.window.document.body.textContent.includes('Consistency and data quality'));
+  assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
+
+  dom.window.location.hash = '#/connections';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.body.textContent.includes('Strava Setup Wizard'));
+  assert.ok(dom.window.document.body.textContent.includes('Run one automatic setup command'));
+  assert.ok(dom.window.document.body.textContent.includes('npm run setup:strava'));
+  assert.ok(dom.window.document.body.textContent.includes('Auto Sync & Retry'));
+  assert.ok(dom.window.document.body.textContent.includes('Sync all connected providers'));
+  assert.ok(dom.window.document.body.textContent.includes('The retry queue is clear'));
+  assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
+
+  dom.window.location.hash = '#/data';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.body.textContent.includes('Activity Integrity'));
+  assert.ok(dom.window.document.body.textContent.includes('Cross-provider deduplication'));
+  assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
+
+  dom.window.location.hash = '#/cloud-backup';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.querySelector('h1')?.textContent.includes('Encrypted Cloud Backup'));
+  assert.ok(dom.window.document.body.textContent.includes('Create a private vault for backups'));
+  assert.ok(dom.window.document.body.textContent.includes('npm run setup:backup'));
+  assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
+
+  dom.window.location.hash = '#/settings';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.querySelector('#settings-form [name="language"]'));
+  assert.equal(dom.window.document.querySelector('#settings-form [name="language"]').value, 'en');
+
+  dom.window.document.querySelector('#language-toggle').click();
+  await waitFor(() => dom.window.document.documentElement.lang === 'th');
+  await waitFor(() => dom.window.document.querySelector('[data-route="today"] small')?.textContent === 'วันนี้');
 
   dom.window.close();
 });

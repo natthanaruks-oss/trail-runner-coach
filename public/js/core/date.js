@@ -31,9 +31,13 @@ export function dateRange(endDateKey, numberOfDays) {
   return out;
 }
 
+function currentLocale() {
+  return globalThis.document?.documentElement?.lang === 'en' ? 'en-GB' : 'th-TH';
+}
+
 export function formatThaiDate(dateKey, options = {}) {
   const d = parseLocalDate(dateKey);
-  return new Intl.DateTimeFormat('th-TH', {
+  return new Intl.DateTimeFormat(currentLocale(), {
     day: 'numeric',
     month: options.short ? 'short' : 'long',
     year: options.year === false ? undefined : 'numeric'
@@ -41,7 +45,7 @@ export function formatThaiDate(dateKey, options = {}) {
 }
 
 export function dayName(dateKey, short = true) {
-  return new Intl.DateTimeFormat('th-TH', { weekday: short ? 'short' : 'long' }).format(parseLocalDate(dateKey));
+  return new Intl.DateTimeFormat(currentLocale(), { weekday: short ? 'short' : 'long' }).format(parseLocalDate(dateKey));
 }
 
 export function nowIso() {

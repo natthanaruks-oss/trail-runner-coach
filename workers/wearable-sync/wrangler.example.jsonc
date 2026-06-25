@@ -1,16 +1,18 @@
 {
   "name": "trail-runner-coach-wearable-sync",
   "main": "src/index.js",
-  "compatibility_date": "2026-06-24",
+  "compatibility_date": "2026-06-25",
   "vars": {
     "APP_ORIGIN": "https://trail-runner-coaches.YOUR.workers.dev",
-    "STRAVA_SCOPES": "read,activity:read_all",
-    "GARMIN_AUTHORIZE_URL": "PROVIDED_AFTER_GARMIN_PROGRAM_APPROVAL",
-    "GARMIN_TOKEN_URL": "PROVIDED_AFTER_GARMIN_PROGRAM_APPROVAL",
-    "GARMIN_SCOPES": "PROVIDED_AFTER_GARMIN_PROGRAM_APPROVAL",
-    "SUUNTO_AUTHORIZE_URL": "https://cloudapi-oauth.suunto.com/oauth/authorize",
-    "SUUNTO_TOKEN_URL": "PROVIDED_BY_SUUNTO_APIZONE",
-    "SUUNTO_SCOPES": "workout"
+    "STRAVA_SCOPES": "read,activity:read_all"
+  },
+  "secrets": {
+    "required": [
+      "TOKEN_ENCRYPTION_KEY",
+      "STRAVA_CLIENT_ID",
+      "STRAVA_CLIENT_SECRET",
+      "STRAVA_VERIFY_TOKEN"
+    ]
   },
   "kv_namespaces": [
     { "binding": "OAUTH_STATE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" },

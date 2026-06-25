@@ -18,3 +18,13 @@ exports/
 *_inbody_*.json
 *inbody*personal*.json
 AppleHealthExport/
+
+# Local wearable integration setup (no secrets are stored in the receipt)
+workers/wearable-sync/wrangler.jsonc
+strava-setup-result.json
+
+# Local encrypted cloud backup setup and recovery material
+workers/cloud-backup/wrangler.jsonc
+cloud-backup-setup-result.json
+*cloud-backup-recovery-kit*.json
+*recovery-kit*.json

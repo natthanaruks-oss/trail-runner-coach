@@ -3,6 +3,7 @@ import { STORES } from './core/constants.js';
 import { createId } from './core/id.js';
 import { localDateKey, nowIso } from './core/date.js';
 import { migrateLegacyLocalStorage } from './adapters/legacy.js';
+import { reconcileStoredActivities } from './adapters/activity-import.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderPlan } from './views/plan.js';
 import { renderCheckin } from './views/checkin.js';
@@ -20,9 +21,14 @@ import { renderTraining } from './views/training.js';
 import { renderFuel } from './views/fuel.js';
 import { renderLog } from './views/log.js';
 import { renderScores } from './views/scores.js';
-import { renderConnections } from './views/connections.js';
+import { renderProgress } from './views/progress.js';
+import { renderConnections, refreshConnectionsSyncUi } from './views/connections.js';
+import { renderCloudBackup } from './views/cloud-backup.js';
+import { initializeSyncLifecycle } from './adapters/sync-manager.js';
+import { initializeCloudBackupLifecycle } from './adapters/cloud-backup.js';
 import { installReceiver as installAppleHealthReceiver } from './adapters/apple-health.js';
 import { modalTemplate, fieldNumber, escapeHtml } from './views/components.js';
+import { applyShellLanguage, getLanguage, localizeDom, localizedField, localizedName, translateWithPhrases } from './core/i18n.js';
 
 const view = document.querySelector('#view');
 const modal = document.querySelector('#modal');
@@ -48,7 +54,9 @@ const routes = {
   fuel: renderFuel,
   log: renderLog,
   scores: renderScores,
-  connections: renderConnections
+  progress: renderProgress,
+  connections: renderConnections,
+  'cloud-backup': renderCloudBackup
 };
 
 const app = {
@@ -61,7 +69,12 @@ const app = {
   openManualActivityModal,
   openQuickAdd,
   closeModal,
-  openModal
+  openModal,
+  get language() { return getLanguage(store.getState().settings); },
+  t(value) { return translateWithPhrases(value, getLanguage(store.getState().settings)); },
+  localize(root = document) { localizeDom(root, getLanguage(store.getState().settings)); },
+  name(record, thaiKey = 'nameTh', englishKey = 'nameEn') { return localizedName(record, getLanguage(store.getState().settings), thaiKey, englishKey); },
+  field(record, field = 'title') { return localizedField(record, getLanguage(store.getState().settings), field); }
 };
 
 async function start() {
@@ -69,10 +82,14 @@ async function start() {
     await store.initializeStore();
     await migrateLegacyLocalStorage(store.getState().settings);
     await store.refreshAll();
+    await reconcileStoredActivities(store);
     installAppleHealthReceiver();
     if (window.history && 'scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
     bindGlobalEvents();
+    applyShellLanguage(getLanguage(store.getState().settings));
     render();
+    initializeSyncLifecycle(store);
+    initializeCloudBackupLifecycle(store);
     registerServiceWorker();
   } catch (error) {
     console.error(error);
@@ -94,10 +111,13 @@ function render(options = {}) {
   const currentScroll = window.scrollY || document.documentElement.scrollTop || 0;
   if (routeChanged && renderedRoute) routeScrollPositions.set(renderedRoute, currentScroll);
   const targetScroll = routeChanged ? (routeScrollPositions.get(route) || 0) : currentScroll;
-  const activeNav = route === 'rehab' ? 'train' : route === 'nutrition' ? 'fuel' : ['pain','body','data','connections','settings','races','gear','motivation','more','checkin'].includes(route) ? 'log' : route === 'scores' ? 'today' : route;
+  const activeNav = route === 'rehab' ? 'train' : route === 'nutrition' ? 'fuel' : ['pain','body','data','connections','cloud-backup','settings','races','gear','motivation','more','checkin','progress'].includes(route) ? 'log' : route === 'scores' ? 'today' : route;
   document.querySelectorAll('[data-route]').forEach(link => link.classList.toggle('active', link.dataset.route === activeNav));
   view.setAttribute('aria-busy', 'true');
   routes[route](view, store.getState(), app);
+  const language = getLanguage(store.getState().settings);
+  applyShellLanguage(language);
+  localizeDom(view, language);
   renderedRoute = route;
   scheduleFrame(() => {
     window.scrollTo({ top: options.scrollTop ? 0 : targetScroll, behavior: 'instant' });
@@ -107,7 +127,22 @@ function render(options = {}) {
 
 function bindGlobalEvents() {
   window.addEventListener('hashchange', render);
+  window.addEventListener('trail-runner-coach:sync-state', () => {
+    if (currentRoute() === 'connections') refreshConnectionsSyncUi(view, store.getState(), app);
+  });
+  window.addEventListener('trail-runner-coach:cloud-backup-state', () => {
+    if (currentRoute() === 'cloud-backup') render();
+  });
   document.querySelector('#quick-add').addEventListener('click', openQuickAdd);
+  document.querySelector('#language-toggle')?.addEventListener('click', async () => {
+    const current = getLanguage(store.getState().settings);
+    const next = current === 'en' ? 'th' : 'en';
+    closeModal();
+    await store.saveSettings({ language: next });
+    applyShellLanguage(next);
+    render();
+    toast(next === 'en' ? 'Language changed to English' : 'เปลี่ยนเป็นภาษาไทยแล้ว');
+  });
   modal.addEventListener('click', event => {
     if (event.target === modal || event.target.closest('[data-close-modal]')) closeModal();
   });
@@ -116,6 +151,7 @@ function bindGlobalEvents() {
 
 function openModal(title, body) {
   modalContent.innerHTML = modalTemplate(title, body);
+  localizeDom(modalContent, getLanguage(store.getState().settings));
   if (!modal.open) modal.showModal();
 }
 function closeModal() {
@@ -148,7 +184,7 @@ function openWorkoutModal(session) {
   const state = store.getState();
   const existing = state.workouts.find(item => item.planSessionId === session.id) || {};
   openModal('บันทึกผลการซ้อม', `
-    <div class="callout" style="margin-bottom:13px"><strong>${escapeHtml(session.title?.th || session.t)}</strong><br>${escapeHtml(session.date)} · แผน ${session.km || 0} km · +${session.vert || 0} m</div>
+    <div class="callout" style="margin-bottom:13px"><strong>${escapeHtml(localizedField(session, getLanguage(state.settings), 'title') || session.t)}</strong><br>${escapeHtml(session.date)} · แผน ${session.km || 0} km · +${session.vert || 0} m</div>
     <form id="workout-form"><div class="form-grid">
       <div class="field"><label>สถานะ</label><select name="status"><option value="completed" ${existing.status==='completed'?'selected':''}>ทำแล้ว</option><option value="modified" ${existing.status==='modified'?'selected':''}>ปรับลด/เปลี่ยน</option><option value="skipped" ${existing.status==='skipped'?'selected':''}>พัก/ข้าม</option></select></div>
       <div class="field"><label>วันที่ทำจริง</label><input type="date" name="date" value="${escapeHtml(existing.date || session.date)}"></div>
@@ -193,7 +229,7 @@ function openWorkoutModal(session) {
         externalId,
         date: workout.date,
         startTime: null,
-        name: session.title?.th || session.t,
+        name: localizedField(session, getLanguage(state.settings), 'title') || session.t,
         type: session.t,
         durationMin: workout.durationMin || estimateDuration(workout.actualDistanceKm ?? session.km, session.t),
         distanceKm: workout.actualDistanceKm ?? session.km ?? 0,
@@ -245,7 +281,7 @@ function estimateDuration(distance, type) {
 
 let toastTimer;
 function toast(message) {
-  toastElement.textContent = message;
+  toastElement.textContent = translateWithPhrases(message, getLanguage(store.getState().settings));
   toastElement.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastElement.classList.remove('show'), 2600);

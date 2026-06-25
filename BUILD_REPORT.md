@@ -1,75 +1,51 @@
-# Build Report — Trail Runner Coach 1.3.0
+# Build Report — Trail Runner Coach 2.0.0
 
-## Scope delivered
+## Scope delivered: Step 6 of 6
 
-- Preserved all primary workflows: Today, Plan, Train, Food and Log.
-- Preserved Strain 0–21, Recovery 0–100, Readiness 0–100, Pain Safety Gate, Rehab, Plan, Body, Sleep, Backup and legacy migration.
-- Expanded the food catalog from 449 to **1,824 records** by adding 1,375 estimated Thai prepared foods.
-- Added lazy food-data loading, Thai/English search, expanded category filters and gram-based portion entry.
-- Added calorie deficit/surplus analysis for 7/14/30/90-day and custom date filters.
-- Added complete-day coverage protection, deficit/surplus totals, net offset, average deficit and theoretical weight trend.
-- Added Apple Health, Garmin, Suunto and Strava connection center.
-- Implemented Strava OAuth/sync Worker path; created Garmin/Suunto secure OAuth boundaries pending provider access.
-- Removed full-store refresh after normal writes and preserved per-route scroll to reduce flicker and jump-to-top behavior.
+**Encrypted Cloud Backup** was implemented without removing any existing feature.
 
-## Verification evidence
+Delivered:
 
-- Repository verification: passed.
-- Legacy bundled foods: 449.
-- Added Thai prepared foods: 1,375.
-- Total searchable food records: 1,824.
-- Automated tests: **18/18 passed**.
-- Browser/IndexedDB route integration: passed, including `#/connections`.
-- Food CRUD, catalog override and expanded dataset tests: passed.
-- Custom filtered calorie-deficit test: passed.
-- Legacy backup migration test: passed.
-- Strain/Recovery/Readiness safety tests: passed.
-- JavaScript syntax checks: passed.
-- Cloudflare Wrangler 4.103.0 dry-run: passed; **62 public asset files** detected.
-- npm audit: **0 vulnerabilities**.
+- Browser-side PBKDF2-SHA-256 and AES-GCM-256 encryption.
+- Encrypted snapshot checksum validation and gzip compression when supported.
+- Cloudflare Worker with two KV bindings, hashed vault authorization, version retention and opaque encrypted storage.
+- Recovery Kit export/import with no passphrase.
+- Manual and automatic backup, version listing, Merge/Replace restore, deletion and device disconnect.
+- Bilingual UI and setup command `npm run setup:backup`.
+- Sensitive cloud credentials are excluded from normal local JSON exports.
+- No IndexedDB schema change.
+
+## Automated verification
+
+- Repository verification: **passed** — 449 legacy foods + 1,375 prepared foods.
+- Automated tests: **53/53 passed**.
+- Cloud-backup crypto tests: passphrase encryption/decryption, remembered derived key and wrong-passphrase rejection passed.
+- Cloud-backup Worker lifecycle test: create vault, upload, list, download and delete encrypted versions passed.
+- Browser/IndexedDB integration and primary-route rendering passed.
+- Main Cloudflare Worker dry-run: **passed — 72 public assets**.
+- Cloud-backup Worker dry-run: **passed — 2 KV bindings**.
+- Wearable-sync Worker dry-run: **passed — 3 KV bindings**.
+- `npm audit --omit=dev`: **0 vulnerabilities**.
+- Full `npm audit`: **0 vulnerabilities**.
 
 ## Runtime and deployment
 
-- Node: 22.16.0
+- Node.js: 22+
 - Wrangler: 4.103.0
-- Cloudflare Worker name: `trail-runner-coaches`
-- Static asset directory: `./public`
-- Package/application/PWA cache version: 1.3.0
-- IndexedDB database: `trail_runner_coach`, schema version 4
+- Main Cloudflare Worker: `trail-runner-coaches`
+- Optional cloud-backup Worker: `trail-runner-coach-cloud-backup`
+- Optional wearable-sync Worker: `trail-runner-coach-wearable-sync`
+- App/PWA cache version: 2.0.0
+- IndexedDB: `trail_runner_coach`, schema version 4
 
-Recommended Cloudflare settings when automatic npm install is disabled:
+## Security boundary
 
-```text
-SKIP_DEPENDENCY_INSTALL=true
-Build command: leave blank, or echo "No build step"
-Deploy command: pnpm dlx wrangler@4.103.0 deploy
-Root directory: /
-```
+- No passphrase, Recovery Kit, access token, OAuth secret, health export or InBody record is bundled in the deploy package.
+- The Cloudflare Worker stores encrypted envelopes and cannot derive the encryption key from stored data.
+- The access token is stored server-side only as a SHA-256 hash.
+- Losing the passphrase makes existing backup versions unrecoverable.
+- Remembering the encryption key is optional and stores derived key material only on the current device.
 
-Do not enter the literal word `None` in Build command.
+## Known operational limitation
 
-## Interaction verification
-
-- Normal record writes update IndexedDB and local in-memory state without calling a full `refreshAll()`.
-- Same-route renders retain the current scroll position.
-- Route changes store and restore independent scroll positions.
-- Browser history scroll restoration is manual.
-- No global opacity/loading transition is used for routine saves.
-- Stable scrollbar and disabled overflow anchoring reduce layout jumps.
-
-## Provider integration status
-
-- Apple Health: native HealthKit companion source is included; Xcode signing and physical-iPhone testing are still required.
-- Strava: OAuth, token refresh, webhook endpoint and recent activity normalization are implemented; API app credentials and Worker deployment are required.
-- Garmin: OAuth/security boundary is ready; live Health/Activity mapping requires Developer Program approval and granted documentation/scopes.
-- Suunto: OAuth/security boundary is ready; live workout/FIT mapping requires partner approval and granted endpoint details.
-
-## Privacy check
-
-The deploy package excludes `node_modules`, `.wrangler`, `.env`, Apple Health exports, InBody imports, FIT/TCX/GPX files, user backups, OAuth secrets and signing data.
-
-## Verified on 24 June 2026
-
-- `npm run check`: passed — 18/18 tests.
-- `wrangler deploy --dry-run`: passed — 62 public assets.
-- `npm audit --omit=dev`: 0 vulnerabilities.
+Automatic backup runs while the web app/PWA is open, regains focus or returns online. A fully closed or suspended browser cannot run continuous background backup.

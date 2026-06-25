@@ -38,5 +38,6 @@ export function emptyState(message) {
 export function formatNumber(value, digits = 0) {
   const number = Number(value);
   if (!Number.isFinite(number)) return '—';
-  return new Intl.NumberFormat('th-TH', { maximumFractionDigits: digits }).format(number);
+  const locale = globalThis.document?.documentElement?.lang === 'en' ? 'en-US' : 'th-TH';
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(number);
 }

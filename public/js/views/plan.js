@@ -31,7 +31,7 @@ export function renderPlan(container, state, app) {
     </div>
     <section class="card flat" style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start">
-        <div><div class="eyebrow">${escapeHtml(week.phase)}</div><h2 style="margin:5px 0 4px">${escapeHtml(week.label?.th || week.id)}</h2><div style="color:var(--muted);font-size:11px">${formatThaiDate(weekSessions[0].date,{short:true})} – ${formatThaiDate(weekSessions[6].date,{short:true})}</div></div>
+        <div><div class="eyebrow">${escapeHtml(week.phase)}</div><h2 style="margin:5px 0 4px">${escapeHtml(app.field(week, 'label') || week.id)}</h2><div style="color:var(--muted);font-size:11px">${formatThaiDate(weekSessions[0].date,{short:true})} – ${formatThaiDate(weekSessions[6].date,{short:true})}</div></div>
         <div style="text-align:right"><div class="metric" style="font-size:23px">${formatNumber(totalKm,1)}<small>km</small></div><div class="submetric">+${formatNumber(totalVert)} m</div></div>
       </div>
     </section>
@@ -42,7 +42,7 @@ export function renderPlan(container, state, app) {
         const isRest = ['Rest','Rehab'].includes(session.t) && Number(session.km) === 0;
         return `<button class="card flat day-card" data-session-id="${session.id}" style="width:100%;text-align:left;color:inherit;cursor:pointer;${isToday ? 'border-color:var(--mint)' : ''}">
           <div class="day-date"><small>${escapeHtml(session.day)}</small><strong>${session.date.slice(-2)}</strong></div>
-          <div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><strong>${escapeHtml(session.title?.th || session.t)}</strong>${isToday ? '<span class="tag">วันนี้</span>' : ''}${workout?.status === 'completed' ? '<span class="tag done">ทำแล้ว</span>' : isRest ? '<span class="tag rest">Recovery</span>' : ''}</div><small style="color:var(--muted)">${escapeHtml(session.t)}${session.note?.th ? ` · ${escapeHtml(session.note.th)}` : ''}</small></div>
+          <div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><strong>${escapeHtml(app.field(session, 'title') || session.t)}</strong>${isToday ? '<span class="tag">วันนี้</span>' : ''}${workout?.status === 'completed' ? '<span class="tag done">ทำแล้ว</span>' : isRest ? '<span class="tag rest">Recovery</span>' : ''}</div><small style="color:var(--muted)">${escapeHtml(session.t)}${app.field(session, 'note') ? ` · ${escapeHtml(app.field(session, 'note'))}` : ''}</small></div>
           <div style="text-align:right"><strong>${session.km ? `${formatNumber(session.km,1)} km` : '—'}</strong><small style="display:block;color:var(--muted);margin-top:3px">${session.vert ? `+${formatNumber(session.vert)} m` : ''}</small></div>
         </button>`;
       }).join('')}

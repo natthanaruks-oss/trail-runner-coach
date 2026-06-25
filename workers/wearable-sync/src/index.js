@@ -5,7 +5,8 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return cors(new Response(null, { status: 204 }), env);
     try {
-      if (url.pathname === '/health') return json({ ok: true, service: 'trail-runner-coach-wearable-sync', providers: CLOUD_PROVIDERS }, 200, env);
+      if (url.pathname === '/health') return json({ ok: true, service: 'trail-runner-coach-wearable-sync', version: '1.8.0', providers: CLOUD_PROVIDERS }, 200, env);
+      if (url.pathname === '/setup/status' && request.method === 'GET') return setupStatus(request, env);
       if (url.pathname.match(/^\/oauth\/(garmin|suunto|strava)\/start$/) && request.method === 'GET') return oauthStart(request, env);
       if (url.pathname.match(/^\/oauth\/(garmin|suunto|strava)\/callback$/) && request.method === 'GET') return oauthCallback(request, env);
       if (url.pathname === '/api/connections' && request.method === 'GET') return getConnections(request, env);
@@ -16,10 +17,41 @@ export default {
       return json({ ok: false, code: 'not_found' }, 404, env);
     } catch (error) {
       console.error(error);
-      return json({ ok: false, code: 'internal_error', message: error.message || 'Unexpected error' }, 500, env);
+      const headers = error.retryAfterSeconds ? { 'retry-after': String(error.retryAfterSeconds) } : {};
+      return json({ ok: false, code: error.code || 'internal_error', message: error.message || 'Unexpected error' }, error.status || 500, env, headers);
     }
   }
 };
+
+
+function setupStatus(request, env) {
+  const origin = new URL(request.url).origin;
+  const strava = {
+    clientId: Boolean(env.STRAVA_CLIENT_ID),
+    clientSecret: Boolean(env.STRAVA_CLIENT_SECRET),
+    encryptionKey: Boolean(env.TOKEN_ENCRYPTION_KEY),
+    verifyToken: Boolean(env.STRAVA_VERIFY_TOKEN)
+  };
+  strava.ready = Object.values(strava).every(Boolean);
+  const kv = {
+    oauthState: Boolean(env.OAUTH_STATE),
+    wearableTokens: Boolean(env.WEARABLE_TOKENS),
+    wearableEvents: Boolean(env.WEARABLE_EVENTS)
+  };
+  const appOrigin = Boolean(env.APP_ORIGIN);
+  return json({
+    ok: true,
+    service: 'trail-runner-coach-wearable-sync',
+    version: '1.8.0',
+    appOrigin,
+    appOriginValue: appOrigin ? env.APP_ORIGIN : null,
+    kv,
+    providers: { strava },
+    ready: appOrigin && strava.ready && Object.values(kv).every(Boolean),
+    callbackUrl: `${origin}/oauth/strava/callback`,
+    webhookUrl: `${origin}/webhooks/strava`
+  }, 200, env);
+}
 
 async function oauthStart(request, env) {
   requireBindings(env, ['OAUTH_STATE', 'WEARABLE_TOKENS', 'TOKEN_ENCRYPTION_KEY', 'APP_ORIGIN']);
@@ -154,7 +186,12 @@ async function fetchStravaActivities(token, days) {
   url.searchParams.set('per_page', '200');
   const response = await fetch(url, { headers: { Authorization: `Bearer ${token.access_token}` } });
   const rows = await response.json().catch(() => []);
-  if (!response.ok) throw new Error(`Strava activity sync failed (${response.status})`);
+  if (!response.ok) {
+    const error = new HttpError(response.status, `Strava activity sync failed (${response.status})`, response.status === 429 ? 'rate_limited' : 'provider_error');
+    const retryAfter = Number(response.headers.get('retry-after'));
+    if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterSeconds = retryAfter;
+    throw error;
+  }
   return rows.map(activity => ({
     id: `activity-strava-${activity.id}`,
     externalId: `strava:${activity.id}`,
@@ -216,5 +253,15 @@ async function encryptionKey(secret) { const raw = secret.length === 44 ? base64
 async function encryptJson(value, secret) { const iv = crypto.getRandomValues(new Uint8Array(12)); const key = await encryptionKey(secret); const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(value)))); return JSON.stringify({ iv: bytesToBase64(iv), data: bytesToBase64(encrypted) }); }
 async function decryptJson(value, secret) { const parsed = JSON.parse(value); const key = await encryptionKey(secret); const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64ToBytes(parsed.iv) }, key, base64ToBytes(parsed.data)); return JSON.parse(new TextDecoder().decode(decrypted)); }
 function cors(response, env) { const headers = new Headers(response.headers); headers.set('access-control-allow-origin', env.APP_ORIGIN || '*'); headers.set('access-control-allow-headers', 'authorization,content-type'); headers.set('access-control-allow-methods', 'GET,POST,DELETE,OPTIONS'); return new Response(response.body, { status: response.status, headers }); }
-function json(body, status, env) { return cors(Response.json(body, { status }), env); }
-class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
+function json(body, status, env, extraHeaders = {}) {
+  const response = Response.json(body, { status, headers: extraHeaders });
+  return cors(response, env);
+}
+class HttpError extends Error {
+  constructor(status, message, code = null) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.retryAfterSeconds = null;
+  }
+}

@@ -60,7 +60,9 @@ export function renderCheckin(container, state, app) {
       settings: app.store.getState().settings,
       dateKey: record.date
     });
-    renderResult(container.querySelector('#checkin-result'), readiness);
+    const resultContainer = container.querySelector('#checkin-result');
+    renderResult(resultContainer, readiness);
+    app.localize(resultContainer);
     app.toast('บันทึก Readiness แล้ว');
   });
 }

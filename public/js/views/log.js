@@ -4,7 +4,7 @@ import { localDateKey, nowIso } from '../core/date.js';
 import { escapeHtml, formatNumber, pageHeader } from './components.js';
 import { renderConnections } from './connections.js';
 
-const TABS=[['motivation','แรงใจ'],['pain','อาการเจ็บ'],['body','น้ำหนัก'],['sleep','การนอน'],['connections','เชื่อมต่อ'],['data','ข้อมูล']];
+const TABS=[['motivation','แรงใจ'],['progress','ความก้าวหน้า'],['pain','อาการเจ็บ'],['body','น้ำหนัก'],['sleep','การนอน'],['connections','เชื่อมต่อ'],['data','ข้อมูล']];
 const QUOTES=[
   'ความก้าวหน้า ไม่ใช่ความสมบูรณ์แบบ',
   'ทุกครั้งที่อยากเลิก จำว่าทำไมถึงเริ่ม',
@@ -18,7 +18,7 @@ export function renderLog(container,state,app){
   const tab=app.ui.logTab;
   container.innerHTML=`${pageHeader('บันทึก','แรงใจ อาการเจ็บ น้ำหนัก การนอน และข้อมูลสำรอง — อิง workflow เดิม','Personal logbook')}
   <div class="segmented-scroll">${TABS.map(([k,l])=>`<button class="segmented-button ${tab===k?'active':''}" data-log-tab="${k}">${l}</button>`).join('')}</div><div id="log-content" class="section"></div>`;
-  container.querySelectorAll('[data-log-tab]').forEach(button=>button.addEventListener('click',()=>{app.ui.logTab=button.dataset.logTab;app.render();}));
+  container.querySelectorAll('[data-log-tab]').forEach(button=>button.addEventListener('click',()=>{const next=button.dataset.logTab;if(next==='progress'){app.navigate('progress');return;}app.ui.logTab=next;app.render();}));
   const content=container.querySelector('#log-content');
   if(tab==='motivation')renderMotivation(content,state,app);
   else if(tab==='pain')renderPainTab(content,state,app);
@@ -30,7 +30,7 @@ export function renderLog(container,state,app){
 
 function renderMotivation(container,state,app){
   const quote=QUOTES[Math.abs(dayNumber(localDateKey()))%QUOTES.length];
-  container.innerHTML=`<article class="card hero"><div class="eyebrow">แรงใจประจำวัน</div><blockquote class="motivation-quote">“${escapeHtml(quote)}”</blockquote></article>
+  container.innerHTML=`<article class="card hero"><div class="eyebrow">แรงใจประจำวัน</div><blockquote class="motivation-quote">“${escapeHtml(app.t(quote))}”</blockquote></article>
   <article class="card flat section"><h2 style="margin-top:0">ทำไมฉันถึงวิ่ง?</h2><p class="submetric">เขียนเหตุผลของคุณไว้กลับมาอ่านในคืนที่ขาไม่อยากก้าว เป้าหมายคือจบอย่างสุขภาพดีและมีความสุข</p><textarea id="motivation-text" class="large-textarea" rows="7" placeholder="เช่น เพื่อสุขภาพ เพื่อพิสูจน์ว่าทำได้ เพื่อคนที่รัก…">${escapeHtml(state.settings.profile?.motivation||'')}</textarea><button class="button primary full" data-save-motivation style="margin-top:12px">บันทึกแรงใจ</button></article>`;
   container.querySelector('[data-save-motivation]').addEventListener('click',async()=>{await app.store.saveSettings({profile:{motivation:container.querySelector('#motivation-text').value}});app.toast('บันทึกแรงใจแล้ว');});
 }

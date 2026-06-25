@@ -8,21 +8,44 @@ const required = [
   'public/js/core/db.js',
   'public/js/core/races.js',
   'public/js/core/nutrition.js',
+  'public/js/core/activity-dedup.js',
+  'public/js/core/i18n.js',
   'public/js/views/races.js',
   'public/js/views/fuel.js',
   'public/js/views/training.js',
   'public/js/views/log.js',
   'public/js/views/scores.js',
+  'public/js/views/progress.js',
+  'public/js/core/progress.js',
   'public/js/data/food-catalog.js',
   'public/js/data/training-library.js',
   'public/js/data/thai-food-dataset.js',
   'public/data/thai-prepared-foods.json',
   'public/js/views/connections.js',
   'public/js/adapters/provider-sync.js',
+  'public/js/adapters/activity-import.js',
+  'public/js/adapters/sync-manager.js',
+  'public/js/engines/calibration.js',
   'public/manifest.webmanifest',
   'wrangler.jsonc',
   'ios/TrailRunnerCoach/project.yml',
-  'docs/FEATURE_PARITY.md'
+  'docs/FEATURE_PARITY.md',
+  'docs/STRAVA_SETUP_WIZARD.md',
+  'docs/ACTIVITY_DEDUP.md',
+  'docs/SYNC_LIFECYCLE.md',
+  'docs/SCORE_CALIBRATION.md',
+  'docs/PROGRESS_DASHBOARD.md',
+  'scripts/setup-strava.mjs',
+  'scripts/lib/strava-setup.mjs',
+  'workers/wearable-sync/src/index.js',
+  'public/js/core/cloud-backup-crypto.js',
+  'public/js/adapters/cloud-backup.js',
+  'public/js/views/cloud-backup.js',
+  'workers/cloud-backup/src/index.js',
+  'workers/cloud-backup/wrangler.example.jsonc',
+  'scripts/setup-cloud-backup.mjs',
+  'scripts/lib/cloud-backup-setup.mjs',
+  'docs/ENCRYPTED_CLOUD_BACKUP.md'
 ];
 
 for (const path of required) {
@@ -46,11 +69,33 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '1.3.0') throw new Error(`Expected package version 1.3.0, received ${packageJson.version}`);
+if (packageJson.version !== '2.0.0') throw new Error(`Expected package version 2.0.0, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v1.3.0')) throw new Error('Service-worker cache version was not bumped to 1.3.0');
+if (!serviceWorker.includes('trail-runner-coach-v2.0.0')) throw new Error('Service-worker cache version was not bumped to 2.0.0');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '1.3.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '2.0.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+const dedupEngine = await readFile(resolve(root, 'public/js/core/activity-dedup.js'), 'utf8');
+if (!dedupEngine.includes('scoreActivityMatch') || !dedupEngine.includes('externalRefs')) throw new Error('Activity deduplication engine is incomplete');
+const activityImport = await readFile(resolve(root, 'public/js/adapters/activity-import.js'), 'utf8');
+if (!activityImport.includes('reconcileStoredActivities') || !activityImport.includes('resolveActivityDuplicate')) throw new Error('Activity import reconciliation is incomplete');
+const syncManager = await readFile(resolve(root, 'public/js/adapters/sync-manager.js'), 'utf8');
+if (!syncManager.includes('retryQueuedSyncs') || !syncManager.includes('runAutoSync') || !syncManager.includes('MAX_RETRY_ATTEMPTS')) throw new Error('Auto sync and retry manager is incomplete');
+const calibrationEngine = await readFile(resolve(root, 'public/js/engines/calibration.js'), 'utf8');
+if (!calibrationEngine.includes('buildCalibrationProfile') || !calibrationEngine.includes('applyReadinessCalibration') || !calibrationEngine.includes('CALIBRATION_PERSONALIZED_DAYS')) throw new Error('Personal score calibration engine is incomplete');
+
+
+const progressEngine = await readFile(resolve(root, 'public/js/core/progress.js'), 'utf8');
+if (!progressEngine.includes('buildProgressDashboard') || !progressEngine.includes('buildComparisons') || !progressEngine.includes('buildCoverage')) throw new Error('Progress dashboard engine is incomplete');
+const progressView = await readFile(resolve(root, 'public/js/views/progress.js'), 'utf8');
+if (!progressView.includes('data-progress-preset') || !progressView.includes('scoreLineChart') || !progressView.includes('Calories balance')) throw new Error('Progress dashboard view is incomplete');
+
+const backupCrypto = await readFile(resolve(root, 'public/js/core/cloud-backup-crypto.js'), 'utf8');
+if (!backupCrypto.includes('AES-GCM') || !backupCrypto.includes('PBKDF2') || !backupCrypto.includes('decryptSnapshot')) throw new Error('Encrypted cloud backup crypto is incomplete');
+const backupAdapter = await readFile(resolve(root, 'public/js/adapters/cloud-backup.js'), 'utf8');
+if (!backupAdapter.includes('backupNow') || !backupAdapter.includes('initializeCloudBackupLifecycle') || !backupAdapter.includes('applyRecoveryKit')) throw new Error('Encrypted cloud backup adapter is incomplete');
+const backupWorker = await readFile(resolve(root, 'workers/cloud-backup/src/index.js'), 'utf8');
+if (!backupWorker.includes('BACKUP_VAULTS') || !backupWorker.includes('BACKUP_BLOBS') || !backupWorker.includes('zeroKnowledge')) throw new Error('Cloud backup Worker is incomplete');
+
 const foodCatalog = await readFile(resolve(root, 'public/js/data/food-catalog.js'), 'utf8');
 const foodCount = (foodCatalog.match(/"id":"legacy-food-/g) || []).length;
 if (foodCount < 400) throw new Error(`Legacy food catalog is unexpectedly small: ${foodCount}`);
@@ -69,3 +114,4 @@ async function walk(dir) {
   }
   return files;
 }
+

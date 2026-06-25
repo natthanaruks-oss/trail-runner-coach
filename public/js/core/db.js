@@ -73,6 +73,24 @@ export async function bulkPut(storeName, values) {
   await transactionDone(tx);
 }
 
+export async function bulkRemove(storeName, keys) {
+  if (!keys.length) return;
+  const db = await getDb();
+  const tx = db.transaction(storeName, 'readwrite');
+  const store = tx.objectStore(storeName);
+  keys.forEach(key => store.delete(key));
+  await transactionDone(tx);
+}
+
+export async function replaceAll(storeName, values) {
+  const db = await getDb();
+  const tx = db.transaction(storeName, 'readwrite');
+  const store = tx.objectStore(storeName);
+  store.clear();
+  values.forEach(value => store.put(structuredClone(value)));
+  await transactionDone(tx);
+}
+
 export async function get(storeName, key) {
   const db = await getDb();
   const tx = db.transaction(storeName, 'readonly');
@@ -99,7 +117,7 @@ export async function clearStore(storeName) {
   await transactionDone(tx);
 }
 
-export async function exportSnapshot() {
+export async function exportSnapshot({ includeSensitive = false } = {}) {
   const snapshot = {
     app: APP_NAME,
     appVersion: APP_VERSION,
@@ -108,15 +126,32 @@ export async function exportSnapshot() {
     stores: {}
   };
   for (const storeName of Object.values(STORES)) snapshot.stores[storeName] = await getAll(storeName);
+  if (!includeSensitive) sanitizeSnapshotSecrets(snapshot);
   return snapshot;
 }
 
 export async function importSnapshot(snapshot, { replace = false } = {}) {
   if (!snapshot?.stores || typeof snapshot.stores !== 'object') throw new Error('ไฟล์ Backup ไม่ถูกต้อง');
-  for (const storeName of Object.values(STORES)) {
-    const rows = snapshot.stores[storeName];
-    if (!Array.isArray(rows)) continue;
-    if (replace) await clearStore(storeName);
-    await bulkPut(storeName, rows);
+  const storeNames = Object.values(STORES).filter(storeName => Array.isArray(snapshot.stores[storeName]));
+  if (!storeNames.length) throw new Error('ไฟล์ Backup ไม่มีข้อมูลที่รองรับ');
+  const database = await getDb();
+  const tx = database.transaction(storeNames, 'readwrite');
+  for (const storeName of storeNames) {
+    const store = tx.objectStore(storeName);
+    if (replace) store.clear();
+    for (const row of snapshot.stores[storeName]) store.put(structuredClone(row));
+  }
+  await transactionDone(tx);
+}
+
+function sanitizeSnapshotSecrets(snapshot) {
+  const settingsRows = snapshot?.stores?.[STORES.SETTINGS];
+  if (!Array.isArray(settingsRows)) return;
+  for (const row of settingsRows) {
+    const backup = row?.integrations?.cloudBackup;
+    if (!backup) continue;
+    backup.accessToken = '';
+    backup.rememberedKey = '';
+    backup.autoBackupEnabled = false;
   }
 }

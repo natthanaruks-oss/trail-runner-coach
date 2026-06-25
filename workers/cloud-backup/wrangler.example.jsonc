@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "trail-runner-coach-cloud-backup",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-25",
+  "vars": {
+    "APP_ORIGIN": "https://trail-runner-coaches.YOUR-SUBDOMAIN.workers.dev"
+  },
+  "kv_namespaces": [
+    { "binding": "BACKUP_VAULTS", "id": "CREATE_WITH_SETUP_SCRIPT" },
+    { "binding": "BACKUP_BLOBS", "id": "CREATE_WITH_SETUP_SCRIPT" }
+  ]
+}
