@@ -30,7 +30,7 @@ export function renderData(container, state, app) {
       ${sourceCard('GPX / TCX / CSV', 'พร้อมใช้', 'green', 'นำเข้ากิจกรรมและ Vertical จากแพลตฟอร์มนาฬิกา')}
       ${sourceCard('Garmin / Suunto / Strava', state.settings?.integrations?.syncBaseUrl ? 'พร้อมตั้งค่า OAuth' : 'ต้องใช้ Sync Worker', 'neutral', 'Cloud OAuth ผ่าน Worker และแปลงเข้าสู่ schema เดียวกับ Apple Health')}
     </section>
-    <div class="grid two" style="margin-top:12px"><button class="button secondary full" data-action="open-connections">จัดการ Apple Health, Garmin, Suunto และ Strava</button><button class="button primary full" data-action="open-cloud-backup">Encrypted Cloud Backup</button></div>
+    <div class="grid two" style="margin-top:12px"><button class="button secondary full" data-action="open-connections">จัดการ Apple Health, Google Health/Fitbit, Garmin, Suunto และ Strava</button><button class="button primary full" data-action="open-cloud-backup">Encrypted Cloud Backup</button></div>
 
     <section class="section">
       <div class="section-head"><h2>Activity Integrity</h2><span>Cross-provider deduplication</span></div>

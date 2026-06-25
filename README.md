@@ -2,6 +2,25 @@
 
 Local-first adaptive trail running coach สำหรับใช้งานระยะยาวหลายสนาม รองรับ **ภาษาไทยและ English** พร้อมแผนซ้อม ผลจริง Strain, Recovery, Readiness, Pain/Rehab, อาหาร พลังงาน น้ำดื่ม Gear, Body Composition และการเชื่อมข้อมูลจาก wearable ในระบบเดียว
 
+## Version 2.1.0 — Google Health / Fitbit Sync
+
+รุ่นนี้เพิ่มการเชื่อมข้อมูลจาก **Google Health API** สำหรับ Fitbit และ ecosystem ของ Google โดยใช้ Cloudflare Wearable Sync Worker เดิมร่วมกับ Strava และรักษาฟีเจอร์ v2.0.0 ทั้งหมด:
+
+- เพิ่ม Google Health / Fitbit Setup Wizard ใน **บันทึก → เชื่อมต่อ**
+- เพิ่มคำสั่งเดียว `npm run setup:google-health` สำหรับเตรียม KV, ตั้ง OAuth secrets และ Deploy Worker
+- ใช้ Google OAuth 2.0 แบบ offline access พร้อม encrypted refresh-token storage
+- Sync Exercise, Sleep, Resting HR, HRV, Steps, Active Energy, Active Minutes, Distance, Weight และ Body Fat
+- ข้อมูลทุกประเภทถูกแปลงเข้า provider-neutral schema ก่อนคำนวณ Strain, Recovery และ Readiness
+- Workout จาก Google Health/Fitbit ผ่าน Cross-provider Deduplication เพื่อไม่ให้นับซ้ำกับ Strava, Apple Health หรือไฟล์นำเข้า
+- การ Sync บาง data type ล้มเหลวจะไม่ทำให้ข้อมูลประเภทอื่นที่อ่านได้ถูกทิ้ง และแสดง warning ตรวจสอบได้
+- Auto Sync, Last Sync, Retry Queue และ Activity Integrity รองรับ `google_health`
+- รองรับภาษาไทยและ English โดยไม่เปลี่ยน IndexedDB schema
+- Client Secret และ refresh token ไม่ถูกฝังใน Public Web Bundle หรือ setup receipt
+
+การเชื่อมบัญชีจริงต้องมี Google Cloud OAuth credentials ของผู้ใช้และตั้ง Authorized redirect URI ตาม Worker ที่ Deploy แล้ว
+
+รายละเอียด: `docs/GOOGLE_HEALTH_FITBIT.md`
+
 ## Version 2.0.0 — Encrypted Cloud Backup
 
 รุ่นนี้ทำ **Step 6 ของ Integration Roadmap** และปิดวงจร Local-first ด้วย Cloud Backup แบบเข้ารหัสจากฝั่งผู้ใช้ก่อนอัปโหลด:

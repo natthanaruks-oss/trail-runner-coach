@@ -4,6 +4,7 @@ export const ACTIVITY_DEDUP_SCHEMA_VERSION = 1;
 
 const AUTO_SOURCES = new Set([
   SOURCE_TYPES.APPLE_HEALTH,
+  SOURCE_TYPES.GOOGLE_HEALTH,
   SOURCE_TYPES.GARMIN,
   SOURCE_TYPES.SUUNTO,
   SOURCE_TYPES.STRAVA,
@@ -15,6 +16,7 @@ const AUTO_SOURCES = new Set([
 const SOURCE_PRIORITY = Object.freeze({
   manual: 100,
   garmin: 92,
+  google_health: 91,
   suunto: 90,
   gpx: 88,
   tcx: 86,
@@ -26,14 +28,14 @@ const SOURCE_PRIORITY = Object.freeze({
 });
 
 const FIELD_PRIORITY = Object.freeze({
-  distanceKm: ['garmin', 'suunto', 'gpx', 'tcx', 'strava', 'apple_health', 'csv', 'legacy'],
-  elevationGainM: ['gpx', 'tcx', 'garmin', 'suunto', 'strava', 'apple_health', 'csv', 'legacy'],
-  elevationLossM: ['gpx', 'tcx', 'garmin', 'suunto', 'strava', 'apple_health', 'csv', 'legacy'],
-  avgHr: ['garmin', 'apple_health', 'suunto', 'strava', 'tcx', 'gpx', 'csv', 'legacy'],
-  maxHr: ['garmin', 'apple_health', 'suunto', 'strava', 'tcx', 'gpx', 'csv', 'legacy'],
-  activeEnergyKcal: ['apple_health', 'garmin', 'suunto', 'strava', 'csv', 'legacy'],
-  durationMin: ['garmin', 'suunto', 'apple_health', 'strava', 'gpx', 'tcx', 'csv', 'legacy'],
-  rpe: ['manual', 'strava', 'garmin', 'suunto', 'apple_health', 'csv', 'legacy']
+  distanceKm: ['garmin', 'google_health', 'suunto', 'gpx', 'tcx', 'strava', 'apple_health', 'csv', 'legacy'],
+  elevationGainM: ['gpx', 'tcx', 'garmin', 'google_health', 'suunto', 'strava', 'apple_health', 'csv', 'legacy'],
+  elevationLossM: ['gpx', 'tcx', 'garmin', 'google_health', 'suunto', 'strava', 'apple_health', 'csv', 'legacy'],
+  avgHr: ['garmin', 'google_health', 'apple_health', 'suunto', 'strava', 'tcx', 'gpx', 'csv', 'legacy'],
+  maxHr: ['garmin', 'google_health', 'apple_health', 'suunto', 'strava', 'tcx', 'gpx', 'csv', 'legacy'],
+  activeEnergyKcal: ['apple_health', 'google_health', 'garmin', 'suunto', 'strava', 'csv', 'legacy'],
+  durationMin: ['garmin', 'google_health', 'suunto', 'apple_health', 'strava', 'gpx', 'tcx', 'csv', 'legacy'],
+  rpe: ['manual', 'strava', 'garmin', 'google_health', 'suunto', 'apple_health', 'csv', 'legacy']
 });
 
 export function normalizeActivityIdentity(activity = {}) {

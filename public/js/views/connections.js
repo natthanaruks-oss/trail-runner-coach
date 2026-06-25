@@ -4,9 +4,11 @@ import {
   disconnectProvider,
   fetchProviderConnections,
   fetchProviderSetupStatus,
+  getGoogleHealthSetupDetails,
   getStravaSetupDetails,
   getSyncBaseUrl,
   normalizeSyncBaseUrl,
+  parseGoogleHealthSetupReceipt,
   parseStravaSetupReceipt,
   startProviderOAuth
 } from '../adapters/provider-sync.js';
@@ -24,9 +26,11 @@ import { escapeHtml, pageHeader } from './components.js';
 const DEFAULT_SYNC_WORKER = 'trail-runner-coach-wearable-sync';
 
 export function renderConnections(container, state, app, options = {}) {
+  const en = app.language === 'en';
   const baseUrl = getSyncBaseUrl(state.settings);
   const predictedUrl = baseUrl || inferWorkerUrl(location.origin, DEFAULT_SYNC_WORKER);
   const details = predictedUrl ? getStravaSetupDetails(predictedUrl) : null;
+  const googleDetails = predictedUrl ? getGoogleHealthSetupDetails(predictedUrl) : null;
   const appleBridge = isAppleHealthBridgeAvailable();
   const syncState = getSyncState(state);
   const callback = new URLSearchParams(location.hash.split('?')[1] || '');
@@ -34,9 +38,12 @@ export function renderConnections(container, state, app, options = {}) {
     ? `เชื่อมต่อ ${callback.get('provider') || 'provider'} แล้ว`
     : callback.get('error') ? `เชื่อมต่อไม่สำเร็จ: ${callback.get('error')}` : '';
 
+  const connectionIntro = en
+    ? 'Apple Health, Google Health/Fitbit, Garmin, Suunto and Strava are normalized into one schema before Strain and Recovery are calculated.'
+    : 'รวม Apple Health, Google Health/Fitbit, Garmin, Suunto และ Strava โดยแปลงข้อมูลเข้าสู่ schema กลางก่อนคำนวณ Strain/Recovery';
   const header = options.embedded
-    ? '<div class="section-head"><h2>การเชื่อมต่อ</h2><span>Health & activity connections</span></div><p class="submetric">รวม Apple Health, Garmin, Suunto และ Strava โดยแปลงข้อมูลเข้าสู่ schema กลางก่อนคำนวณ Strain/Recovery</p>'
-    : pageHeader('การเชื่อมต่อ', 'รวม Apple Health, Garmin, Suunto และ Strava โดยแปลงข้อมูลเข้าสู่ schema กลางก่อนคำนวณ Strain/Recovery', 'Health & activity connections');
+    ? `<div class="section-head"><h2>${en ? 'Connections' : 'การเชื่อมต่อ'}</h2><span>Health & activity connections</span></div><p class="submetric">${connectionIntro}</p>`
+    : pageHeader(en ? 'Connections' : 'การเชื่อมต่อ', connectionIntro, 'Health & activity connections');
 
   container.innerHTML = `${header}
     ${callbackMessage ? `<div class="callout ${callback.get('connected') === '1' ? 'good' : 'danger'}">${escapeHtml(callbackMessage)}</div>` : ''}
@@ -45,15 +52,18 @@ export function renderConnections(container, state, app, options = {}) {
 
     ${stravaWizard(baseUrl, details)}
 
+    ${googleHealthWizard(baseUrl, googleDetails, app.language)}
+
     <section class="connection-grid section">
       ${providerCard('apple_health', { connected: appleBridge, status: appleBridge ? 'พร้อม Sync' : 'ต้องใช้ iOS Companion' }, syncState.providers.apple_health, app.language)}
+      ${providerCard('google_health', { connected: syncState.providers.google_health.connected, status: baseUrl ? 'รอตรวจสถานะ' : (en ? 'Complete Google Health setup first' : 'ทำ Google Health Setup ก่อน') }, syncState.providers.google_health, app.language)}
       ${providerCard('garmin', { connected: syncState.providers.garmin.connected, status: baseUrl ? 'รอตรวจสถานะ' : 'ต้องตั้งค่า Worker' }, syncState.providers.garmin, app.language)}
       ${providerCard('suunto', { connected: syncState.providers.suunto.connected, status: baseUrl ? 'รอตรวจสถานะ' : 'ต้องตั้งค่า Worker' }, syncState.providers.suunto, app.language)}
       ${providerCard('strava', { connected: syncState.providers.strava.connected, status: baseUrl ? 'รอตรวจสถานะ' : 'ทำ Setup Wizard ก่อน' }, syncState.providers.strava, app.language)}
     </section>
 
     <section class="section">
-      <div class="section-head"><h2>Wearable Sync Worker</h2><span>Advanced / Garmin / Suunto</span></div>
+      <div class="section-head"><h2>Wearable Sync Worker</h2><span>Advanced / Google Health / Garmin / Suunto</span></div>
       <article class="card flat">
         <form id="sync-worker-form" class="form-grid">
           <div class="field full"><label>Worker URL</label><input name="syncBaseUrl" type="url" placeholder="https://trail-runner-coach-wearable-sync.YOUR.workers.dev" value="${escapeHtml(baseUrl)}"></div>
@@ -70,11 +80,12 @@ export function renderConnections(container, state, app, options = {}) {
       <div class="list">
         ${step('1', 'Strava', 'Setup Wizard พร้อมใช้งานสำหรับ OAuth และ Activity Sync')}
         ${step('2', 'Apple Health', 'Build iOS Companion ผ่าน Xcode, เปิด HealthKit capability และติดตั้งบน iPhone')}
-        ${step('3', 'Garmin', 'สมัคร Garmin Connect Developer Program และขอ Health + Activity API access')}
-        ${step('4', 'Suunto', 'สมัคร Suunto Partner Program และเปิด Workout/FIT adapter')}
+        ${step('3', 'Google Health / Fitbit', en ? 'Create a Google Cloud OAuth client, then sync workouts, sleep, RHR, HRV, steps and body metrics' : 'สร้าง Google Cloud OAuth client แล้ว Sync Workout, Sleep, RHR, HRV, Steps และ Body metrics')}
+        ${step('4', 'Garmin', 'สมัคร Garmin Connect Developer Program และขอ Health + Activity API access')}
+        ${step('5', 'Suunto', 'สมัคร Suunto Partner Program และเปิด Workout/FIT adapter')}
       </div>
     </section>
-    <div class="callout">Apple Health ใช้ Native HealthKit bridge ส่วน Garmin, Suunto และ Strava ต้องผ่าน OAuth backend เพราะ Client Secret และ refresh token ไม่ควรอยู่ใน browser</div>`;
+    <div class="callout">${en ? 'Apple Health uses a native HealthKit bridge. Google Health/Fitbit, Garmin, Suunto and Strava use an OAuth backend so client secrets and refresh tokens never live in the browser.' : 'Apple Health ใช้ Native HealthKit bridge ส่วน Google Health/Fitbit, Garmin, Suunto และ Strava ต้องผ่าน OAuth backend เพราะ Client Secret และ refresh token ไม่ควรอยู่ใน browser'}</div>`;
 
   bindActions(container, state, app, appleBridge);
   bindSyncCenterActions(container, app);
@@ -132,6 +143,54 @@ function stravaWizard(baseUrl, details) {
   </section>`;
 }
 
+
+function googleHealthWizard(baseUrl, details, language = 'th') {
+  const en = language === 'en';
+  const command = 'npm run setup:google-health';
+  const title = en ? 'Google Health / Fitbit Setup' : 'ตั้งค่า Google Health / Fitbit';
+  const intro = en
+    ? 'Connect Fitbit and Google Health cloud data without installing an Android companion app.'
+    : 'เชื่อมข้อมูล Fitbit และ Google Health ผ่าน Cloud API โดยไม่ต้องติดตั้ง Android Companion';
+  return `<section class="section google-health-wizard" data-google-health-wizard>
+    <div class="section-head"><div><div class="eyebrow">GOOGLE HEALTH API</div><h2>${title}</h2><p class="submetric">${intro}</p></div><span class="status ${baseUrl ? 'green' : 'yellow'}">${baseUrl ? (en ? 'Worker URL saved' : 'มี Worker URL แล้ว') : (en ? 'Setup required' : 'ต้องตั้งค่า')}</span></div>
+    <div class="wizard-steps">
+      <article class="card flat wizard-step">
+        <div class="wizard-step-head"><span class="step-number">1</span><div><h3>${en ? 'Create a Google Cloud OAuth client' : 'สร้าง Google Cloud OAuth Client'}</h3><p class="submetric">${en ? 'Enable Google Health API, configure the consent screen, add your Google account as a test user, and create a Web application OAuth client.' : 'เปิด Google Health API, ตั้ง OAuth consent screen, เพิ่มบัญชี Google เป็น Test user และสร้าง OAuth Client แบบ Web application'}</p></div></div>
+        ${details ? googleHealthDetails(details) : ''}
+        <a class="button secondary" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">${en ? 'Open Google Cloud credentials' : 'เปิด Google Cloud Credentials'}</a>
+      </article>
+      <article class="card flat wizard-step">
+        <div class="wizard-step-head"><span class="step-number">2</span><div><h3>${en ? 'Run the guided setup' : 'รันคำสั่ง Setup'}</h3><p class="submetric">${en ? 'The script stores Client ID and Client Secret as Cloudflare Worker secrets. They are never written into the public web app.' : 'Script จะเก็บ Client ID และ Client Secret เป็น Cloudflare Worker Secrets ไม่เขียนลง Public Web App'}</p></div></div>
+        <div class="copy-row"><code data-i18n-skip>${command}</code><button class="button ghost compact" type="button" data-copy-text="${command}">${en ? 'Copy' : 'คัดลอก'}</button></div>
+      </article>
+      <article class="card flat wizard-step">
+        <div class="wizard-step-head"><span class="step-number">3</span><div><h3>${en ? 'Import the setup result' : 'นำเข้าผล Setup'}</h3><p class="submetric">${en ? 'Import google-health-setup-result.json or save the shared Worker URL manually.' : 'นำเข้าไฟล์ google-health-setup-result.json หรือใช้ Worker URL เดียวกับ Strava'}</p></div></div>
+        <form id="google-health-worker-form" class="form-grid">
+          <div class="field full"><label>Worker URL</label><input name="workerUrl" type="url" placeholder="https://trail-runner-coach-wearable-sync.YOUR.workers.dev" value="${escapeHtml(baseUrl)}"></div>
+          <div class="field full"><label>Import setup result</label><input name="setupReceipt" type="file" accept="application/json,.json"></div>
+          <button class="button primary" type="submit">${en ? 'Save and test' : 'บันทึกและตรวจระบบ'}</button>
+          <button class="button secondary" type="button" data-test-google-health ${baseUrl ? '' : 'disabled'}>${en ? 'Test again' : 'ตรวจระบบอีกครั้ง'}</button>
+        </form>
+        <div id="google-health-setup-status" class="wizard-status submetric">${baseUrl ? (en ? 'Ready to verify Google Health configuration' : 'พร้อมตรวจ Google Health configuration') : (en ? 'Worker URL has not been saved' : 'ยังไม่ได้บันทึก Worker URL')}</div>
+      </article>
+      <article class="card flat wizard-step">
+        <div class="wizard-step-head"><span class="step-number">4</span><div><h3>${en ? 'Connect Fitbit / Google Health' : 'Connect Fitbit / Google Health'}</h3><p class="submetric">${en ? 'Grant only the requested read-only health scopes, then sync up to 90 days.' : 'อนุญาตเฉพาะสิทธิ์อ่านข้อมูลสุขภาพที่ร้องขอ แล้ว Sync ย้อนหลังได้สูงสุด 90 วัน'}</p></div></div>
+        <div class="setup-check-grid">
+          ${setupCheck('google-app-origin', 'App Origin')}
+          ${setupCheck('google-kv', 'Cloudflare KV')}
+          ${setupCheck('google-secrets', 'Google OAuth Secrets')}
+          ${setupCheck('google-ready', 'Google Health Ready')}
+        </div>
+        <div class="button-row"><button class="button primary" type="button" data-connect-google-health ${baseUrl ? '' : 'disabled'}>${en ? 'Connect Google Health' : 'เชื่อมต่อ Google Health'}</button><button class="button secondary" type="button" data-sync-provider="google_health" disabled>${en ? 'Sync Fitbit data' : 'Sync ข้อมูล Fitbit'}</button></div>
+      </article>
+    </div>
+  </section>`;
+}
+
+function googleHealthDetails(details) {
+  return `<div class="setup-details"><div><small>Authorized redirect URI</small><div class="copy-row"><code data-i18n-skip>${escapeHtml(details.callbackUrl)}</code><button class="button ghost compact" type="button" data-copy-text="${escapeHtml(details.callbackUrl)}">คัดลอก</button></div></div></div>`;
+}
+
 function setupDetails(details, mode) {
   return `<div class="setup-details" data-setup-details="${mode}">
     <div><small>Callback Domain</small><div class="copy-row"><code data-i18n-skip>${escapeHtml(details.callbackDomain)}</code><button class="button ghost compact" type="button" data-copy-text="${escapeHtml(details.callbackDomain)}">คัดลอก</button></div></div>
@@ -152,7 +211,7 @@ function providerCard(provider, info, syncInfo, language) {
   const retry = syncInfo?.nextRetryAt ? `Retry ${formatSyncTime(syncInfo.nextRetryAt, language)}` : '';
   return `<article class="card flat connection-card" data-provider-card="${provider}">
     <div class="connection-card-head"><div><div class="eyebrow">${cloud ? 'CLOUD OAUTH' : 'NATIVE HEALTHKIT'}</div><h2>${escapeHtml(def.label)}</h2></div><span class="status ${status.className}" data-provider-status="${provider}">${escapeHtml(status.label)}</span></div>
-    <p class="submetric">${escapeHtml(def.data)}</p>
+    <p class="submetric">${escapeHtml(language === 'en' ? (def.dataEn || def.data) : def.data)}</p>
     <div class="provider-sync-meta" data-provider-sync-meta="${provider}">
       <small><strong>Sync ล่าสุด</strong><span>${escapeHtml(lastSync)}</span></small>
       ${result ? `<small><strong>ผลล่าสุด</strong><span>${escapeHtml(result)}</span></small>` : ''}
@@ -170,6 +229,35 @@ function providerCard(provider, info, syncInfo, language) {
 function bindActions(container, state, app, appleBridge) {
   bindCopyButtons(container, app);
 
+
+  container.querySelector('#google-health-worker-form')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    try {
+      const value = normalizeSyncBaseUrl(new FormData(event.currentTarget).get('workerUrl'));
+      await saveWorkerUrl(app, value);
+      await refreshGoogleHealthSetupStatus(container, app.store.getState(), app);
+    } catch (error) { setGoogleHealthStatus(container, error.message, true, app); }
+  });
+  container.querySelector('#google-health-worker-form [name="setupReceipt"]')?.addEventListener('change', async event => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    try {
+      const receipt = parseGoogleHealthSetupReceipt(await file.text());
+      container.querySelector('#google-health-worker-form [name="workerUrl"]').value = receipt.workerUrl;
+      await saveWorkerUrl(app, receipt.workerUrl);
+      app.toast('นำเข้า Google Health setup result แล้ว');
+      await refreshGoogleHealthSetupStatus(container, app.store.getState(), app);
+    } catch (error) { setGoogleHealthStatus(container, error.message, true, app); }
+    event.currentTarget.value = '';
+  });
+  container.querySelector('[data-test-google-health]')?.addEventListener('click', () =>
+    refreshGoogleHealthSetupStatus(container, app.store.getState(), app).catch(error => setGoogleHealthStatus(container, error.message, true, app))
+  );
+  container.querySelector('[data-connect-google-health]')?.addEventListener('click', () => {
+    try { startProviderOAuth('google_health', app.store.getState().settings); }
+    catch (error) { app.toast(error.message); }
+  });
+
   container.querySelector('#strava-worker-form')?.addEventListener('submit', async event => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -181,7 +269,7 @@ function bindActions(container, state, app, appleBridge) {
     } catch (error) { setWizardStatus(container, error.message, true, app); }
   });
 
-  container.querySelector('[name="setupReceipt"]')?.addEventListener('change', async event => {
+  container.querySelector('#strava-worker-form [name="setupReceipt"]')?.addEventListener('change', async event => {
     const file = event.currentTarget.files?.[0];
     if (!file) return;
     try {
@@ -210,7 +298,9 @@ function bindActions(container, state, app, appleBridge) {
       const value = normalizeSyncBaseUrl(new FormData(event.currentTarget).get('syncBaseUrl'));
       await saveWorkerUrl(app, value);
       const wizardInput = container.querySelector('#strava-worker-form [name="workerUrl"]');
+      const googleInput = container.querySelector('#google-health-worker-form [name="workerUrl"]');
       if (wizardInput) wizardInput.value = value;
+      if (googleInput) googleInput.value = value;
       updateWizardDetails(container, value, app);
       app.toast('บันทึก Worker URL แล้ว');
       await refreshConnectionStatus(container, app.store.getState(), app);
@@ -312,10 +402,11 @@ async function refreshStravaSetupStatus(container, state, app) {
   updateSetupCheck(container, 'kv', kvReady);
   updateSetupCheck(container, 'secrets', secretsReady);
   updateSetupCheck(container, 'ready', Boolean(result.ready));
+  const stravaReady = Boolean(result.appOrigin && kvReady && secretsReady);
   const progress = container.querySelector('[data-strava-progress]');
-  if (progress) progress.style.width = result.ready ? '100%' : '75%';
-  setWizardStatus(container, result.ready ? 'Worker พร้อมแล้ว — ตั้ง Callback Domain ใน Strava แล้วกด Connect Strava' : 'Worker ยังตั้งค่าไม่ครบ ตรวจจุดสีแดงด้านล่าง', !result.ready, app);
-  if (result.ready) await refreshConnectionStatus(container, state, app).catch(() => {});
+  if (progress) progress.style.width = stravaReady ? '100%' : '75%';
+  setWizardStatus(container, stravaReady ? 'Worker พร้อมแล้ว — ตั้ง Callback Domain ใน Strava แล้วกด Connect Strava' : 'Worker ยังตั้งค่าไม่ครบ ตรวจจุดสีแดงด้านล่าง', !stravaReady, app);
+  if (stravaReady) await refreshConnectionStatus(container, state, app).catch(() => {});
   return result;
 }
 
@@ -324,6 +415,31 @@ function updateSetupCheck(container, key, ready) {
   if (!element) return;
   element.classList.toggle('ready', ready);
   element.classList.toggle('missing', !ready);
+}
+
+
+async function refreshGoogleHealthSetupStatus(container, state, app) {
+  setGoogleHealthStatus(container, 'กำลังตรวจ Google Health Worker configuration…', false, app);
+  const result = await fetchProviderSetupStatus(state.settings);
+  const kvReady = Object.values(result.kv || {}).every(Boolean);
+  const secretsReady = Boolean(result.providers?.google_health?.ready);
+  const ready = Boolean(result.appOrigin && kvReady && secretsReady);
+  updateSetupCheck(container, 'google-app-origin', Boolean(result.appOrigin));
+  updateSetupCheck(container, 'google-kv', kvReady);
+  updateSetupCheck(container, 'google-secrets', secretsReady);
+  updateSetupCheck(container, 'google-ready', ready);
+  setGoogleHealthStatus(container, ready ? 'Google Health Worker พร้อมแล้ว — กด Connect Google Health' : 'Google Health setup ยังไม่ครบ ตรวจ Google Cloud OAuth และ Worker Secrets', !ready, app);
+  if (ready) await refreshConnectionStatus(container, state, app).catch(() => {});
+  return result;
+}
+
+function setGoogleHealthStatus(container, message, error = false, app = null) {
+  const element = container.querySelector('#google-health-setup-status');
+  if (!element) return;
+  element.textContent = message;
+  element.classList.toggle('error', error);
+  element.classList.toggle('success', !error);
+  app?.localize(element);
 }
 
 async function refreshConnectionStatus(container, state, app) {

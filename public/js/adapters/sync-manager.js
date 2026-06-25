@@ -11,11 +11,12 @@ import {
   isAppleHealthBridgeAvailable,
   requestAppleHealthSync
 } from './apple-health.js';
+import { importGoogleHealthPayload } from './google-health.js';
 
 export const SYNC_META_ID = 'provider_sync_state_v1';
 export const SYNC_SCHEMA_VERSION = 1;
-export const SYNC_PROVIDERS = Object.freeze(['apple_health', 'garmin', 'suunto', 'strava']);
-export const CLOUD_SYNC_PROVIDERS = Object.freeze(['garmin', 'suunto', 'strava']);
+export const SYNC_PROVIDERS = Object.freeze(['apple_health', 'google_health', 'garmin', 'suunto', 'strava']);
+export const CLOUD_SYNC_PROVIDERS = Object.freeze(['google_health', 'garmin', 'suunto', 'strava']);
 export const DEFAULT_AUTO_SYNC_INTERVAL_MIN = 30;
 export const MAX_RETRY_ATTEMPTS = 5;
 export const RETRY_DELAYS_MS = Object.freeze([
@@ -173,6 +174,16 @@ async function executeProviderSync(appStore, provider, days) {
   }
 
   const payload = await syncProviderActivities(provider, appStore.getState().settings, days);
+  if (provider === 'google_health') {
+    const imported = await importGoogleHealthPayload(appStore, payload);
+    return sanitizeResult({
+      fetched: Number(imported.activities || 0),
+      ...(imported.activityImport || {}),
+      checkins: imported.checkins,
+      bodyComposition: imported.bodyComposition,
+      warnings: imported.warnings
+    });
+  }
   const activities = Array.isArray(payload.activities) ? payload.activities : [];
   const imported = activities.length
     ? await importActivitiesWithDedup(

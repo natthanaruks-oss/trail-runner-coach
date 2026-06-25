@@ -4,22 +4,32 @@ export const PROVIDER_DEFINITIONS = Object.freeze({
   apple_health: {
     label: 'Apple Health',
     type: 'native',
-    data: 'Sleep, RHR, HRV, Steps, Active Energy, Workout และ Body metrics'
+    data: 'Sleep, RHR, HRV, Steps, Active Energy, Workout และ Body metrics',
+    dataEn: 'Sleep, resting HR, HRV, steps, active energy, workouts and body metrics'
   },
   garmin: {
     label: 'Garmin',
     type: 'cloud',
-    data: 'Health API + Activity API ผ่าน Garmin Connect Developer Program'
+    data: 'Health API + Activity API ผ่าน Garmin Connect Developer Program',
+    dataEn: 'Health API and Activity API through Garmin Connect Developer Program'
   },
   suunto: {
     label: 'Suunto',
     type: 'cloud',
-    data: 'Workout/FIT, HR, RR, altitude, GPS ผ่าน Suunto Cloud API'
+    data: 'Workout/FIT, HR, RR, altitude, GPS ผ่าน Suunto Cloud API',
+    dataEn: 'Workout/FIT, HR, RR, altitude and GPS through Suunto Cloud API'
   },
   strava: {
     label: 'Strava',
     type: 'cloud',
-    data: 'Activities, distance, elevation, HR และ webhook updates'
+    data: 'Activities, distance, elevation, HR และ webhook updates',
+    dataEn: 'Activities, distance, elevation, heart rate and webhook updates'
+  },
+  google_health: {
+    label: 'Google Health / Fitbit',
+    type: 'cloud',
+    data: 'Fitbit workouts, Sleep, RHR, HRV, Steps, Active Energy, Weight และ Body Fat',
+    dataEn: 'Fitbit workouts, sleep, resting HR, HRV, steps, active energy, weight and body fat'
   }
 });
 
@@ -37,6 +47,15 @@ export function getSyncBaseUrl(settings) {
   return value ? normalizeSyncBaseUrl(value) : '';
 }
 
+export function getGoogleHealthSetupDetails(value) {
+  const workerUrl = normalizeSyncBaseUrl(value);
+  if (!workerUrl) return null;
+  return {
+    workerUrl,
+    callbackUrl: `${workerUrl}/oauth/google_health/callback`
+  };
+}
+
 export function getStravaSetupDetails(value) {
   const workerUrl = normalizeSyncBaseUrl(value);
   if (!workerUrl) return null;
@@ -47,6 +66,15 @@ export function getStravaSetupDetails(value) {
     callbackUrl: `${workerUrl}/oauth/strava/callback`,
     webhookUrl: `${workerUrl}/webhooks/strava`
   };
+}
+
+export function parseGoogleHealthSetupReceipt(value) {
+  const receipt = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!receipt || receipt.provider !== 'google_health' || Number(receipt.schemaVersion) !== 1) {
+    throw new Error('ไฟล์ Google Health setup ไม่ถูกต้อง');
+  }
+  const details = getGoogleHealthSetupDetails(receipt.workerUrl);
+  return { ...receipt, ...details };
 }
 
 export function parseStravaSetupReceipt(value) {
@@ -91,7 +119,7 @@ export async function fetchProviderConnections(settings) {
 }
 
 export function startProviderOAuth(provider, settings) {
-  if (!['garmin', 'suunto', 'strava'].includes(provider)) throw new Error('Provider ไม่รองรับ');
+  if (!['garmin', 'suunto', 'strava', 'google_health'].includes(provider)) throw new Error('Provider ไม่รองรับ');
   const baseUrl = getSyncBaseUrl(settings);
   if (!baseUrl) throw new Error('กรุณาตั้งค่า Wearable Sync Worker URL ก่อน');
   const returnTo = `${location.origin}/#/connections`;

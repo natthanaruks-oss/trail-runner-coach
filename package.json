@@ -1,9 +1,9 @@
 {
   "name": "trail-runner-coach",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
-  "description": "Local-first bilingual adaptive trail coach with wearable sync, personalized scores, progress analytics and zero-knowledge encrypted cloud backup",
+  "description": "Local-first bilingual adaptive trail coach with Apple Health, Google Health/Fitbit, Strava sync, personalized scores, analytics and encrypted cloud backup",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",
@@ -11,7 +11,8 @@
     "check": "node scripts/verify.mjs && node --test",
     "deploy:dry-run": "npx wrangler deploy --dry-run",
     "setup:strava": "node scripts/setup-strava.mjs",
-    "setup:backup": "node scripts/setup-cloud-backup.mjs"
+    "setup:backup": "node scripts/setup-cloud-backup.mjs",
+    "setup:google-health": "node scripts/setup-google-health.mjs"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.2.5",

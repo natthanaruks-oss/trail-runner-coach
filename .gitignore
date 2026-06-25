@@ -22,6 +22,7 @@ AppleHealthExport/
 # Local wearable integration setup (no secrets are stored in the receipt)
 workers/wearable-sync/wrangler.jsonc
 strava-setup-result.json
+google-health-setup-result.json
 
 # Local encrypted cloud backup setup and recovery material
 workers/cloud-backup/wrangler.jsonc

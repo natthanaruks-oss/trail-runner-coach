@@ -6,7 +6,7 @@ import { pageHeader, rangeField, fieldNumber, escapeHtml, statusBadge } from './
 export function renderCheckin(container, state, app) {
   const date = app.ui.checkinDate || localDateKey();
   const existing = state.checkins.find(item => item.date === date) || {};
-  const existingProvider = existing.sources?.includes('apple_health') ? 'apple_health' : existing.sources?.includes('garmin') ? 'garmin' : existing.sources?.includes('suunto') ? 'suunto' : existing.source;
+  const existingProvider = existing.sources?.includes('google_health') ? 'google_health' : existing.sources?.includes('apple_health') ? 'apple_health' : existing.sources?.includes('garmin') ? 'garmin' : existing.sources?.includes('suunto') ? 'suunto' : existing.source;
   container.innerHTML = `
     ${pageHeader('Daily Readiness Check', 'ใช้เวลา 60–90 วินาที ก่อนตัดสินใจซ้อม', 'Recovery before ego')}
     <form id="checkin-form" class="card">
@@ -15,7 +15,7 @@ export function renderCheckin(container, state, app) {
         ${fieldNumber({ name:'sleepHours', label:'นอนกี่ชั่วโมง', value:existing.sleepHours ?? '', min:0, max:14, step:.1, placeholder:'เช่น 6.5' })}
         ${fieldNumber({ name:'restingHr', label:'Resting HR ตอนตื่น', value:existing.restingHr ?? '', min:30, max:150, placeholder:'bpm' })}
         ${fieldNumber({ name:'hrvMs', label:'HRV (ถ้ามี)', value:existing.hrvMs ?? '', min:1, max:300, placeholder:'ms' })}
-        <div class="field"><label for="source">แหล่งข้อมูล</label><select id="source" name="source"><option value="manual">กรอกเอง</option><option value="garmin" ${existingProvider==='garmin'?'selected':''}>Garmin</option><option value="suunto" ${existingProvider==='suunto'?'selected':''}>Suunto</option><option value="apple_health" ${existingProvider==='apple_health'?'selected':''}>Apple Health</option></select></div>
+        <div class="field"><label for="source">แหล่งข้อมูล</label><select id="source" name="source"><option value="manual">กรอกเอง</option><option value="garmin" ${existingProvider==='garmin'?'selected':''}>Garmin</option><option value="suunto" ${existingProvider==='suunto'?'selected':''}>Suunto</option><option value="apple_health" ${existingProvider==='apple_health'?'selected':''}>Apple Health</option><option value="google_health" ${existingProvider==='google_health'?'selected':''}>Google Health / Fitbit</option></select></div>
         ${rangeField({ name:'sleepQuality', label:'คุณภาพการนอน 1 แย่ – 5 ดี', value:existing.sleepQuality ?? 3 })}
         ${rangeField({ name:'fatigue', label:'ความล้า 1 น้อย – 5 มาก', value:existing.fatigue ?? 3 })}
         ${rangeField({ name:'stress', label:'ความเครียด/ภาระงาน 1 น้อย – 5 มาก', value:existing.stress ?? 3 })}

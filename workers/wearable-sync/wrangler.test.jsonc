@@ -4,7 +4,8 @@
   "compatibility_date": "2026-06-25",
   "vars": {
     "APP_ORIGIN": "https://example.com",
-    "STRAVA_SCOPES": "read,activity:read_all"
+    "STRAVA_SCOPES": "read,activity:read_all",
+    "GOOGLE_HEALTH_SCOPES": "openid email profile https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly https://www.googleapis.com/auth/googlehealth.sleep.readonly"
   },
   "kv_namespaces": [
     {"binding": "OAUTH_STATE", "id": "11111111111111111111111111111111"},

@@ -7,7 +7,7 @@ export function renderMore(container){
     ['🎒','Gear Checklist','อุปกรณ์กลางคืนและพึ่งพาตัวเอง','gear'],
     ['❤️','ทำไมฉันถึงวิ่ง','เหตุผลที่ต้องกลับมาอ่านตอนท้อ','motivation'],
     ['⌁','ข้อมูล & Wearables','Import, Export และกิจกรรมล่าสุด','data'],
-    ['◉','การเชื่อมต่อ','Apple Health, Garmin, Suunto และ Strava','connections'],
+    ['◉','การเชื่อมต่อ','Apple Health, Google Health/Fitbit, Garmin, Suunto และ Strava','connections'],
     ['🔐','Encrypted Cloud Backup','สำรองข้อมูลแบบเข้ารหัสก่อนส่งขึ้น Cloudflare','cloud-backup'],
     ['⚖️','Body & InBody','Baseline, กล้ามเนื้อ และองค์ประกอบร่างกาย','body'],
     ['⚙','ตั้งค่า','Athlete baseline และ App preferences','settings']

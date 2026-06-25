@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.1.0 — Google Health / Fitbit Sync
+
+- Added Google Health / Fitbit as a first-class cloud provider in Connections, Sync status, Retry Queue and Activity Integrity.
+- Added a Google OAuth 2.0 web-server flow with offline access, CSRF state validation, encrypted token storage and refresh-token support in the shared wearable-sync Worker.
+- Added live Google Health API data-point retrieval for exercise, sleep, daily resting heart rate, daily HRV, steps, active energy, active minutes, distance, weight and body fat.
+- Added partial-success handling so an unavailable data type produces a warning without discarding other valid provider data.
+- Added browser-side normalization and import into daily check-ins, body composition and canonical activities.
+- Routed Google Health/Fitbit workouts through cross-provider deduplication to prevent double-counting with Strava, Apple Health and file imports.
+- Added a bilingual Google Health / Fitbit Setup Wizard and one-command `npm run setup:google-health` workflow.
+- Added secret-free setup receipt import, readiness checks and provider-specific connection/sync controls.
+- Added Google Health setup, normalization, deduplication and secret-boundary tests; complete automated suite is now 57/57.
+- Validated official v4 Date, CivilDateTime, ObservationSampleTime, exercise metrics, HRV and active-minutes shapes in automated fixtures.
+- Google Health webhooks are intentionally not enabled in 2.1.0; authenticated API sync is used until subscriber provisioning and signed-event verification are implemented.
+- Preserved IndexedDB schema version 4 and all food, training, backup, score-calibration and analytics workflows.
+- Bumped package, app, wearable Worker and PWA cache versions to 2.1.0.
+
 ## 2.0.0 — Encrypted Cloud Backup
 
 - Added a zero-knowledge encrypted cloud-backup route and bilingual setup workflow.

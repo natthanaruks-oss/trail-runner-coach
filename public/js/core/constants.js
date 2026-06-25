@@ -1,5 +1,5 @@
 export const APP_NAME = 'Trail Runner Coach';
-export const APP_VERSION = '2.0.0';
+export const APP_VERSION = '2.1.0';
 export const DB_NAME = 'trail_runner_coach';
 export const DB_VERSION = 4;
 export const LEGACY_STORAGE_KEYS = Object.freeze(['rtc70_v2', 'trail_runner_coach_v1']);
@@ -115,6 +115,7 @@ export const SOURCE_TYPES = Object.freeze({
   GARMIN: 'garmin',
   SUUNTO: 'suunto',
   STRAVA: 'strava',
+  GOOGLE_HEALTH: 'google_health',
   APPLE_HEALTH: 'apple_health',
   HYBRID: 'hybrid'
 });

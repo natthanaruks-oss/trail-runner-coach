@@ -4,14 +4,17 @@
   "compatibility_date": "2026-06-25",
   "vars": {
     "APP_ORIGIN": "https://trail-runner-coaches.YOUR.workers.dev",
-    "STRAVA_SCOPES": "read,activity:read_all"
+    "STRAVA_SCOPES": "read,activity:read_all",
+    "GOOGLE_HEALTH_SCOPES": "openid email profile https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly https://www.googleapis.com/auth/googlehealth.sleep.readonly"
   },
   "secrets": {
     "required": [
       "TOKEN_ENCRYPTION_KEY",
       "STRAVA_CLIENT_ID",
       "STRAVA_CLIENT_SECRET",
-      "STRAVA_VERIFY_TOKEN"
+      "STRAVA_VERIFY_TOKEN",
+      "GOOGLE_HEALTH_CLIENT_ID",
+      "GOOGLE_HEALTH_CLIENT_SECRET"
     ]
   },
   "kv_namespaces": [

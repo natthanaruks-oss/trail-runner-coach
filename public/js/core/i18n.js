@@ -333,6 +333,17 @@ const EN_EXACT = Object.freeze({
 
   // Connections
   'Apple Health, Garmin, Suunto และ Strava': 'Apple Health, Garmin, Suunto, and Strava',
+
+  'Apple Health, Google Health/Fitbit, Garmin, Suunto และ Strava': 'Apple Health, Google Health/Fitbit, Garmin, Suunto, and Strava',
+  'จัดการ Apple Health, Google Health/Fitbit, Garmin, Suunto และ Strava': 'Manage Apple Health, Google Health/Fitbit, Garmin, Suunto, and Strava',
+  'ทำ Google Health Setup ก่อน': 'Complete Google Health setup first',
+  'เชื่อมต่อ Google Health': 'Connect Google Health',
+  'Sync ข้อมูล Fitbit': 'Sync Fitbit data',
+  'ตั้งค่า Google Health / Fitbit': 'Google Health / Fitbit setup',
+  'สร้าง Google Cloud OAuth Client': 'Create a Google Cloud OAuth client',
+  'เปิด Google Cloud Credentials': 'Open Google Cloud credentials',
+  'รันคำสั่ง Setup': 'Run the setup command',
+  'นำเข้าผล Setup': 'Import the setup result',
   'จัดการ Apple Health, Garmin, Suunto และ Strava': 'Manage Apple Health, Garmin, Suunto, and Strava',
   'พร้อม Sync': 'Ready to sync',
   'ยังไม่เชื่อมต่อ': 'Not connected',
