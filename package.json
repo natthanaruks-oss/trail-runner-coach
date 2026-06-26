@@ -1,9 +1,9 @@
 {
   "name": "trail-runner-coach",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
-  "description": "Local-first bilingual adaptive trail coach with Apple Health, Google Health/Fitbit, Strava sync, personalized scores, analytics and encrypted cloud backup",
+  "description": "Mobile-first local-first bilingual trail coach with preserved wearable sync, adaptive training, recovery, nutrition and encrypted backup",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",

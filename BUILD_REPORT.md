@@ -1,55 +1,53 @@
-# Build Report — Trail Runner Coach 2.1.0
+# Build Report — Trail Runner Coach 2.2.0
 
 ## Scope delivered
 
-**Google Health / Fitbit Sync** was added without removing the existing food, training, score calibration, analytics, backup or wearable workflows.
+**Mobile App UX & Navigation** was delivered as a reversible frontend refactor. The release changes navigation, layout and presentation while preserving the established wearable-sync and data-storage boundaries.
 
 Delivered:
 
-- Google Health / Fitbit provider in Connections, Auto Sync, Retry Queue and Activity Integrity.
-- Google OAuth 2.0 web-server flow with CSRF state validation, offline access, encrypted refresh-token storage and token refresh.
-- Google Health API v4 retrieval for exercise, sleep, daily resting heart rate, daily HRV, steps, active energy, active minutes, distance, weight and body fat.
-- Normalization of official Google Health v4 date/time objects, exercise metric summaries and body-measurement records.
-- Civil-date handling so daily recovery metrics remain aligned to the athlete's local calendar date.
-- Partial-success warnings when one data type is unavailable while other valid data continues to import.
-- Provider-neutral browser import into check-ins, body composition and canonical activities.
-- Cross-provider workout deduplication against Apple Health, Strava and file imports.
-- Bilingual Google Health / Fitbit Setup Wizard and one-command `npm run setup:google-health` workflow.
-- Secret-free setup receipt and setup/readiness diagnostics.
-- No Google Health public webhook is enabled in this release; sync uses authenticated API reads. A future webhook implementation must add Google subscriber/subscription provisioning and signed-event verification.
-- No IndexedDB schema change; database remains version 4.
+- Five-item daily navigation: Today, Plan, Train, Food and More.
+- Grouped More control center for health journal, progress, body data, connections, data hub, encrypted backup, race, gear, nutrition and settings.
+- New compact Devices & Connections page for normal Connect, Sync, Sync All and status-refresh actions.
+- Existing full Connections page retained as Advanced Setup & Troubleshooting.
+- Health Journal no longer embeds the full setup wizard, reducing page length and unnecessary rendering.
+- Mobile viewport, safe-area and `100dvh` handling.
+- 16 px mobile form controls to prevent browser auto-zoom.
+- Solid mobile header/navigation surfaces with reduced blur and shadows.
+- Bottom-sheet dialogs on small screens.
+- PWA standalone metadata and installed-app status guidance.
+- CSP retains access to `https://trail-runner-coach-wearable-sync.natthanaruk-s.workers.dev`.
+- IndexedDB remains schema version 4.
+
+## Sync preservation evidence
+
+The following runtime files are byte-for-byte unchanged from the uploaded v2.1.0 package:
+
+- `workers/wearable-sync/src/index.js`
+- `public/js/adapters/provider-sync.js`
+- `public/js/adapters/sync-manager.js`
+- `public/js/core/db.js`
+- `public/js/core/store.js`
+- `public/js/views/connections.js`
+
+Only the application version constant, PWA cache name and CSP/header configuration changed around the sync boundary. No KV namespace name, OAuth route, token key, device token key, provider endpoint, database schema or record format was changed.
 
 ## Automated verification
 
 - Repository verification: **passed** — 449 legacy foods + 1,375 prepared foods.
 - Automated tests: **57/57 passed**.
-- Google Health tests: setup config/receipt, official v4 payload normalization, Fitbit/Strava deduplication and secret-boundary status checks passed.
-- Browser/IndexedDB integration and primary-route rendering passed.
-- Main Cloudflare Worker dry-run: **passed — 73 public assets**.
-- Wearable-sync Worker dry-run: **passed — 3 KV bindings**, Google Health scopes present.
-- Cloud-backup Worker dry-run: **passed — 2 KV bindings**.
-- `npm audit --omit=dev`: **0 vulnerabilities**.
-- Full `npm audit`: **0 vulnerabilities**.
+- Browser/IndexedDB integration and primary-route rendering: **passed**.
+- New More and compact Connections routes: **passed** in integration coverage.
+- `npm audit`: **0 vulnerabilities** after clean install.
 
 ## Runtime and deployment
 
 - Node.js: 22+
 - Wrangler: 4.103.0
-- Main Cloudflare Worker: `trail-runner-coaches`
-- Optional wearable-sync Worker: `trail-runner-coach-wearable-sync`
-- Optional cloud-backup Worker: `trail-runner-coach-cloud-backup`
-- App/PWA cache version: 2.1.0
+- Main app package/cache version: 2.2.0
+- Wearable-sync Worker runtime version: 2.1.0 (intentionally unchanged)
 - IndexedDB: `trail_runner_coach`, schema version 4
 
-## Security boundary
+## Deployment note
 
-- Google OAuth Client Secret and provider refresh tokens are never bundled in `public/` or the setup receipt.
-- OAuth tokens are encrypted with AES-GCM before Cloudflare KV storage.
-- OAuth state is short-lived and bound to the requesting browser device hash.
-- Callback return URLs are restricted to the configured `APP_ORIGIN`.
-- `/setup/status` returns only credential-presence booleans and callback metadata.
-- The current random device-token model is suitable for a personal prototype. Add authenticated user accounts and per-user authorization before a public multi-user deployment.
-
-## Verified limitation
-
-A live end-to-end Google authorization and data pull was not executed in this build environment because it requires the owner's Google Cloud project, OAuth Client ID/Secret, consent configuration and a Google account containing Fitbit/Google Health data. Code-level tests, official-shape fixtures, repository checks and Cloudflare dry-runs passed; live validation remains a deployment step for the project owner.
+Deploy the root project normally. The root `wrangler.jsonc` publishes only the `public/` application assets. It does not redeploy the optional wearable-sync Worker, so the existing live Worker, KV bindings, secrets and stored tokens remain in place.

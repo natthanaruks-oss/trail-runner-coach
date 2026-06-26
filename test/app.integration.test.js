@@ -46,6 +46,7 @@ test('application initializes the multi-race IndexedDB model and renders primary
     ['nutrition', 'Nutrition & Fueling'],
     ['gear', 'Gear Checklist'],
     ['data', 'ข้อมูล & Wearables'],
+    ['connections-home', 'อุปกรณ์และการเชื่อมต่อ'],
     ['connections', 'การเชื่อมต่อ'],
     ['cloud-backup', 'Encrypted Cloud Backup'],
     ['body', 'Body & InBody'],
@@ -53,7 +54,8 @@ test('application initializes the multi-race IndexedDB model and renders primary
     ['settings', 'ตั้งค่า'],
     ['train', 'ฝึก'],
     ['fuel', 'อาหาร'],
-    ['log', 'บันทึก']
+    ['log', 'บันทึก'],
+    ['more', 'เพิ่มเติม']
   ]) {
     dom.window.location.hash = `#/${route}`;
     dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
@@ -151,7 +153,7 @@ test('application initializes the multi-race IndexedDB model and renders primary
   assert.equal(dom.window.document.querySelector('[data-route="plan"] small').textContent, 'Plan');
   assert.equal(dom.window.document.querySelector('[data-route="train"] small').textContent, 'Train');
   assert.equal(dom.window.document.querySelector('[data-route="fuel"] small').textContent, 'Food');
-  assert.equal(dom.window.document.querySelector('[data-route="log"] small').textContent, 'Log');
+  assert.equal(dom.window.document.querySelector('[data-route="more"] small').textContent, 'More');
 
   dom.window.location.hash = '#/plan';
   dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));

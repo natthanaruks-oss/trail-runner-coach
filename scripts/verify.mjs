@@ -22,6 +22,7 @@ const required = [
   'public/js/data/thai-food-dataset.js',
   'public/data/thai-prepared-foods.json',
   'public/js/views/connections.js',
+  'public/js/views/connections-home.js',
   'public/js/adapters/provider-sync.js',
   'public/js/adapters/activity-import.js',
   'public/js/adapters/sync-manager.js',
@@ -73,11 +74,11 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '2.1.0') throw new Error(`Expected package version 2.1.0, received ${packageJson.version}`);
+if (packageJson.version !== '2.2.0') throw new Error(`Expected package version 2.2.0, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v2.1.0')) throw new Error('Service-worker cache version was not bumped to 2.1.0');
+if (!serviceWorker.includes('trail-runner-coach-v2.2.0')) throw new Error('Service-worker cache version was not bumped to 2.2.0');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '2.1.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '2.2.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const dedupEngine = await readFile(resolve(root, 'public/js/core/activity-dedup.js'), 'utf8');
 if (!dedupEngine.includes('scoreActivityMatch') || !dedupEngine.includes('externalRefs')) throw new Error('Activity deduplication engine is incomplete');
 const activityImport = await readFile(resolve(root, 'public/js/adapters/activity-import.js'), 'utf8');

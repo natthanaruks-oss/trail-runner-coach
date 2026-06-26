@@ -2,6 +2,22 @@
 
 Local-first adaptive trail running coach สำหรับใช้งานระยะยาวหลายสนาม รองรับ **ภาษาไทยและ English** พร้อมแผนซ้อม ผลจริง Strain, Recovery, Readiness, Pain/Rehab, อาหาร พลังงาน น้ำดื่ม Gear, Body Composition และการเชื่อมข้อมูลจาก wearable ในระบบเดียว
 
+## Version 2.2.0 — Mobile App UX & Navigation
+
+รุ่นนี้ปรับแอปให้ใช้งานบนมือถือเหมือนแอปจริง โดย **ไม่เปลี่ยนระบบ Sync, Worker, OAuth, KV, IndexedDB หรือข้อมูลเดิม**:
+
+- เมนูหลักใหม่: **วันนี้ / แผน / ฝึก / อาหาร / เพิ่มเติม**
+- หน้า **เพิ่มเติม** แบ่งหมวดสุขภาพ ข้อมูล อุปกรณ์ การแข่งขัน และการตั้งค่า
+- หน้า **อุปกรณ์และการเชื่อมต่อ** แบบสั้นสำหรับดูสถานะและกด Sync ประจำวัน
+- Setup Wizard, Worker URL, KV, Secrets และ Retry Queue ย้ายไปอยู่หน้า **การตั้งค่าขั้นสูง**
+- หน้า Health Journal ไม่ Render Connections Wizard ทั้งหมดอีกต่อไป จึงโหลดเบาและเลื่อนสั้นลง
+- ป้องกัน Auto Zoom ของช่องกรอกบนมือถือด้วยขนาดตัวอักษร 16px
+- รองรับ Safe Area, `100dvh`, Bottom Sheet Modal และป้องกัน Horizontal Scroll
+- ลด Blur และ Shadow บนมือถือเพื่อให้เลื่อนลื่นขึ้น
+- เพิ่ม PWA/Standalone metadata สำหรับเปิดจาก Home Screen แบบเต็มหน้าจอ
+- IndexedDB ยังคง schema version 4 และข้อมูลเดิมใช้ต่อได้ทันที
+- Wearable Worker และ Sync adapters ไม่ถูกแก้ไขในรุ่นนี้
+
 ## Version 2.1.0 — Google Health / Fitbit Sync
 
 รุ่นนี้เพิ่มการเชื่อมข้อมูลจาก **Google Health API** สำหรับ Fitbit และ ecosystem ของ Google โดยใช้ Cloudflare Wearable Sync Worker เดิมร่วมกับ Strava และรักษาฟีเจอร์ v2.0.0 ทั้งหมด:

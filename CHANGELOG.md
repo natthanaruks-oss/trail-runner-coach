@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.2.0 — Mobile App UX & Navigation
+
+- Rebuilt the primary journey around five daily destinations: Today, Plan, Train, Food and More.
+- Replaced the overloaded Log bottom tab with a grouped More control center while retaining every existing route and record type.
+- Added a compact Devices & Connections screen for daily Connect/Sync actions; the existing setup wizard and troubleshooting screen remain available under Advanced Settings.
+- Removed the full Connections wizard from the Health Journal tab, reducing initial DOM size and avoiding unnecessary setup/status work during normal logging.
+- Added mobile-safe viewport behavior, 16 px form controls to prevent automatic browser zoom, safe-area spacing, `100dvh`, bottom-sheet dialogs and horizontal-overflow protection.
+- Reduced mobile blur and shadow effects to improve scrolling and rendering performance.
+- Added installed-app metadata and a clearer standalone/PWA experience.
+- Preserved the wearable Worker, provider adapters, sync manager, IndexedDB schema, store logic, KV bindings, OAuth routes and token records unchanged.
+- Retained the required CSP permission for the deployed wearable Worker domain.
+- Bumped package, application and PWA cache versions to 2.2.0; wearable Worker runtime remains 2.1.0 because no sync-runtime change was made.
+- Repository verification and all 57 automated tests passed.
+
 ## 2.1.0 — Google Health / Fitbit Sync
 
 - Added Google Health / Fitbit as a first-class cloud provider in Connections, Sync status, Retry Queue and Activity Integrity.

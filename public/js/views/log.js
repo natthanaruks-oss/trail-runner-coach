@@ -2,7 +2,6 @@ import { PAIN_AREAS, STORES } from '../core/constants.js';
 import { createId } from '../core/id.js';
 import { localDateKey, nowIso } from '../core/date.js';
 import { escapeHtml, formatNumber, pageHeader } from './components.js';
-import { renderConnections } from './connections.js';
 
 const TABS=[['motivation','แรงใจ'],['progress','ความก้าวหน้า'],['pain','อาการเจ็บ'],['body','น้ำหนัก'],['sleep','การนอน'],['connections','เชื่อมต่อ'],['data','ข้อมูล']];
 const QUOTES=[
@@ -18,13 +17,12 @@ export function renderLog(container,state,app){
   const tab=app.ui.logTab;
   container.innerHTML=`${pageHeader('บันทึก','แรงใจ อาการเจ็บ น้ำหนัก การนอน และข้อมูลสำรอง — อิง workflow เดิม','Personal logbook')}
   <div class="segmented-scroll">${TABS.map(([k,l])=>`<button class="segmented-button ${tab===k?'active':''}" data-log-tab="${k}">${l}</button>`).join('')}</div><div id="log-content" class="section"></div>`;
-  container.querySelectorAll('[data-log-tab]').forEach(button=>button.addEventListener('click',()=>{const next=button.dataset.logTab;if(next==='progress'){app.navigate('progress');return;}app.ui.logTab=next;app.render();}));
+  container.querySelectorAll('[data-log-tab]').forEach(button=>button.addEventListener('click',()=>{const next=button.dataset.logTab;if(next==='progress'){app.navigate('progress');return;}if(next==='connections'){app.navigate('connections-home');return;}app.ui.logTab=next;app.render();}));
   const content=container.querySelector('#log-content');
   if(tab==='motivation')renderMotivation(content,state,app);
   else if(tab==='pain')renderPainTab(content,state,app);
   else if(tab==='body')renderBodyTab(content,state,app);
   else if(tab==='sleep')renderSleepTab(content,state,app);
-  else if(tab==='connections')renderConnections(content,state,app,{embedded:true});
   else renderDataTab(content,state);
 }
 

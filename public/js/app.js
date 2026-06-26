@@ -23,6 +23,7 @@ import { renderLog } from './views/log.js';
 import { renderScores } from './views/scores.js';
 import { renderProgress } from './views/progress.js';
 import { renderConnections, refreshConnectionsSyncUi } from './views/connections.js';
+import { renderConnectionsHome } from './views/connections-home.js';
 import { renderCloudBackup } from './views/cloud-backup.js';
 import { initializeSyncLifecycle } from './adapters/sync-manager.js';
 import { initializeCloudBackupLifecycle } from './adapters/cloud-backup.js';
@@ -56,6 +57,7 @@ const routes = {
   scores: renderScores,
   progress: renderProgress,
   connections: renderConnections,
+  'connections-home': renderConnectionsHome,
   'cloud-backup': renderCloudBackup
 };
 
@@ -111,16 +113,29 @@ function render(options = {}) {
   const currentScroll = window.scrollY || document.documentElement.scrollTop || 0;
   if (routeChanged && renderedRoute) routeScrollPositions.set(renderedRoute, currentScroll);
   const targetScroll = routeChanged ? (routeScrollPositions.get(route) || 0) : currentScroll;
-  const activeNav = route === 'rehab' ? 'train' : route === 'nutrition' ? 'fuel' : ['pain','body','data','connections','cloud-backup','settings','races','gear','motivation','more','checkin','progress'].includes(route) ? 'log' : route === 'scores' ? 'today' : route;
-  document.querySelectorAll('[data-route]').forEach(link => link.classList.toggle('active', link.dataset.route === activeNav));
+  const activeNav = route === 'rehab'
+    ? 'train'
+    : route === 'nutrition'
+      ? 'fuel'
+      : ['pain','body','data','connections','connections-home','cloud-backup','settings','races','gear','motivation','more','log','checkin','progress'].includes(route)
+        ? 'more'
+        : route === 'scores' ? 'today' : route;
+  document.querySelectorAll('[data-route]').forEach(link => {
+    const active = link.dataset.route === activeNav;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
   view.setAttribute('aria-busy', 'true');
+  view.dataset.route = route;
+  document.body.dataset.route = route;
   routes[route](view, store.getState(), app);
   const language = getLanguage(store.getState().settings);
   applyShellLanguage(language);
   localizeDom(view, language);
   renderedRoute = route;
   scheduleFrame(() => {
-    window.scrollTo({ top: options.scrollTop ? 0 : targetScroll, behavior: 'instant' });
+    window.scrollTo({ top: options.scrollTop ? 0 : targetScroll, behavior: 'auto' });
     view.removeAttribute('aria-busy');
   });
 }
@@ -128,7 +143,9 @@ function render(options = {}) {
 function bindGlobalEvents() {
   window.addEventListener('hashchange', render);
   window.addEventListener('trail-runner-coach:sync-state', () => {
-    if (currentRoute() === 'connections') refreshConnectionsSyncUi(view, store.getState(), app);
+    const route = currentRoute();
+    if (route === 'connections') refreshConnectionsSyncUi(view, store.getState(), app);
+    else if (route === 'connections-home' || route === 'more') render();
   });
   window.addEventListener('trail-runner-coach:cloud-backup-state', () => {
     if (currentRoute() === 'cloud-backup') render();
