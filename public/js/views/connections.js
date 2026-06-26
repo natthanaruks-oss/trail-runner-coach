@@ -1,4 +1,4 @@
-import { isAppleHealthBridgeAvailable } from '../adapters/apple-health.js';
+import { appleHealthConnectionMode, isAppleHealthAvailable } from '../adapters/apple-health.js';
 import {
   PROVIDER_DEFINITIONS,
   disconnectProvider,
@@ -31,7 +31,8 @@ export function renderConnections(container, state, app, options = {}) {
   const predictedUrl = baseUrl || inferWorkerUrl(location.origin, DEFAULT_SYNC_WORKER);
   const details = predictedUrl ? getStravaSetupDetails(predictedUrl) : null;
   const googleDetails = predictedUrl ? getGoogleHealthSetupDetails(predictedUrl) : null;
-  const appleBridge = isAppleHealthBridgeAvailable();
+  const appleBridge = isAppleHealthAvailable(state.settings);
+  const appleMode = appleHealthConnectionMode(state.settings);
   const syncState = getSyncState(state);
   const callback = new URLSearchParams(location.hash.split('?')[1] || '');
   const callbackMessage = callback.get('connected') === '1'
@@ -55,7 +56,7 @@ export function renderConnections(container, state, app, options = {}) {
     ${googleHealthWizard(baseUrl, googleDetails, app.language)}
 
     <section class="connection-grid section">
-      ${providerCard('apple_health', { connected: appleBridge, status: appleBridge ? 'พร้อม Sync' : 'ต้องใช้ iOS Companion' }, syncState.providers.apple_health, app.language)}
+      ${providerCard('apple_health', { connected: appleBridge, status: appleBridge ? (appleMode === 'native' ? (en ? 'Native HealthKit ready' : 'Native HealthKit พร้อม') : (en ? 'Shortcuts bridge ready' : 'Shortcuts Bridge พร้อม')) : (en ? 'Set up Apple Health Shortcut' : 'ตั้งค่า Apple Health Shortcut') }, syncState.providers.apple_health, app.language)}
       ${providerCard('google_health', { connected: syncState.providers.google_health.connected, status: baseUrl ? 'รอตรวจสถานะ' : (en ? 'Complete Google Health setup first' : 'ทำ Google Health Setup ก่อน') }, syncState.providers.google_health, app.language)}
       ${providerCard('garmin', { connected: syncState.providers.garmin.connected, status: baseUrl ? 'รอตรวจสถานะ' : 'ต้องตั้งค่า Worker' }, syncState.providers.garmin, app.language)}
       ${providerCard('suunto', { connected: syncState.providers.suunto.connected, status: baseUrl ? 'รอตรวจสถานะ' : 'ต้องตั้งค่า Worker' }, syncState.providers.suunto, app.language)}
@@ -79,13 +80,13 @@ export function renderConnections(container, state, app, options = {}) {
       <div class="section-head"><h2>Provider Roadmap</h2><span>แนะนำทำทีละ Provider</span></div>
       <div class="list">
         ${step('1', 'Strava', 'Setup Wizard พร้อมใช้งานสำหรับ OAuth และ Activity Sync')}
-        ${step('2', 'Apple Health', 'Build iOS Companion ผ่าน Xcode, เปิด HealthKit capability และติดตั้งบน iPhone')}
+        ${step('2', 'Apple Health', en ? 'Use the Shortcuts bridge now, or the iOS Companion when Xcode is available' : 'ใช้ Shortcuts Bridge ได้ทันที หรือใช้ iOS Companion เมื่อมี Xcode')}
         ${step('3', 'Google Health / Fitbit', en ? 'Create a Google Cloud OAuth client, then sync workouts, sleep, RHR, HRV, steps and body metrics' : 'สร้าง Google Cloud OAuth client แล้ว Sync Workout, Sleep, RHR, HRV, Steps และ Body metrics')}
         ${step('4', 'Garmin', 'สมัคร Garmin Connect Developer Program และขอ Health + Activity API access')}
         ${step('5', 'Suunto', 'สมัคร Suunto Partner Program และเปิด Workout/FIT adapter')}
       </div>
     </section>
-    <div class="callout">${en ? 'Apple Health uses a native HealthKit bridge. Google Health/Fitbit, Garmin, Suunto and Strava use an OAuth backend so client secrets and refresh tokens never live in the browser.' : 'Apple Health ใช้ Native HealthKit bridge ส่วน Google Health/Fitbit, Garmin, Suunto และ Strava ต้องผ่าน OAuth backend เพราะ Client Secret และ refresh token ไม่ควรอยู่ใน browser'}</div>`;
+    <div class="callout">${en ? 'Apple Health uses a native HealthKit bridge. Google Health/Fitbit, Garmin, Suunto and Strava use an OAuth backend so client secrets and refresh tokens never live in the browser.' : 'Apple Health ใช้ Shortcuts Bridge หรือ Native HealthKit ส่วน Google Health/Fitbit, Garmin, Suunto และ Strava ต้องผ่าน OAuth backend เพราะ Client Secret และ refresh token ไม่ควรอยู่ใน browser'}</div>`;
 
   bindActions(container, state, app, appleBridge);
   bindSyncCenterActions(container, app);
@@ -203,6 +204,7 @@ function setupCheck(key, label) {
 }
 
 function providerCard(provider, info, syncInfo, language) {
+  const en = language === 'en';
   const def = PROVIDER_DEFINITIONS[provider];
   const cloud = def.type === 'cloud';
   const status = providerStatus(syncInfo, info);
@@ -220,7 +222,9 @@ function providerCard(provider, info, syncInfo, language) {
     </div>
     <div class="button-row" style="margin-top:12px">
       ${provider === 'apple_health'
-        ? `<button class="button primary" data-apple-sync ${info.connected ? '' : 'disabled'}>${info.connected ? 'Sync Apple Health' : 'เปิดผ่าน iOS Companion'}</button>`
+        ? info.connected
+          ? `<button class="button primary" data-apple-sync>Sync Apple Health</button><a class="button secondary" href="#/apple-health-shortcut">${en ? 'Manage' : 'จัดการ'}</a>`
+          : `<a class="button primary" href="#/apple-health-shortcut">${en ? 'Set up Apple Health Shortcut' : 'ตั้งค่า Apple Health Shortcut'}</a>`
         : `<button class="button primary" data-connect-provider="${provider}">เชื่อมต่อ</button><button class="button secondary" data-sync-provider="${provider}" ${info.connected ? '' : 'disabled'}>Sync</button><button class="button danger" data-disconnect-provider="${provider}" ${info.connected ? '' : 'disabled'}>ยกเลิก</button>`}
     </div>
   </article>`;

@@ -183,6 +183,13 @@ test('application initializes the multi-race IndexedDB model and renders primary
   assert.ok(dom.window.document.body.textContent.includes('The retry queue is clear'));
   assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
 
+  dom.window.location.hash = '#/apple-health-shortcut';
+  dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+  await waitFor(() => dom.window.document.querySelector('h1')?.textContent.includes('Apple Health Shortcut'));
+  assert.ok(dom.window.document.body.textContent.includes('npm run setup:apple-health-shortcut'));
+  assert.ok(dom.window.document.body.textContent.includes('Build the iPhone shortcut'));
+  assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
+
   dom.window.location.hash = '#/data';
   dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
   await waitFor(() => dom.window.document.body.textContent.includes('Activity Integrity'));

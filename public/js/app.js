@@ -25,6 +25,7 @@ import { renderProgress } from './views/progress.js';
 import { renderConnections, refreshConnectionsSyncUi } from './views/connections.js';
 import { renderConnectionsHome } from './views/connections-home.js';
 import { renderCloudBackup } from './views/cloud-backup.js';
+import { renderAppleHealthShortcut } from './views/apple-health-shortcut.js';
 import { initializeSyncLifecycle } from './adapters/sync-manager.js';
 import { initializeCloudBackupLifecycle } from './adapters/cloud-backup.js';
 import { installReceiver as installAppleHealthReceiver } from './adapters/apple-health.js';
@@ -58,7 +59,8 @@ const routes = {
   progress: renderProgress,
   connections: renderConnections,
   'connections-home': renderConnectionsHome,
-  'cloud-backup': renderCloudBackup
+  'cloud-backup': renderCloudBackup,
+  'apple-health-shortcut': renderAppleHealthShortcut
 };
 
 const app = {
@@ -117,7 +119,7 @@ function render(options = {}) {
     ? 'train'
     : route === 'nutrition'
       ? 'fuel'
-      : ['pain','body','data','connections','connections-home','cloud-backup','settings','races','gear','motivation','more','log','checkin','progress'].includes(route)
+      : ['pain','body','data','connections','connections-home','cloud-backup','apple-health-shortcut','settings','races','gear','motivation','more','log','checkin','progress'].includes(route)
         ? 'more'
         : route === 'scores' ? 'today' : route;
   document.querySelectorAll('[data-route]').forEach(link => {

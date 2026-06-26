@@ -193,3 +193,12 @@
 ## 1.0.0 — Trail Runner Coach foundation
 
 - Introduced multi-race profiles, IndexedDB, adaptive readiness engines and Apple Health bridge foundation.
+
+## 2.3.0
+
+- Added a separate Apple Health Shortcuts Bridge Worker.
+- Added AES-GCM encryption before Apple Health data is stored in KV.
+- Added a guided Apple Health Shortcut setup page and run-shortcut deep link.
+- Added daily recovery/body metric pull through the existing Apple Health normalizer.
+- Preserved the existing Strava Worker, OAuth routes, tokens, KV namespaces and IndexedDB schema.
+- Removed the Apple Health bridge token from normal app backup exports.

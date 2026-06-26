@@ -1,0 +1,21 @@
+{
+  "source": "apple_health",
+  "exportedAt": "2026-06-26T06:30:00.000Z",
+  "dailyMetric": {
+    "date": "2026-06-26",
+    "sleepHours": 7.2,
+    "restingHr": 54,
+    "hrvMs": 48,
+    "activeEnergyKcal": 780,
+    "steps": 8240,
+    "exerciseMinutes": 65,
+    "walkingRunningDistanceKm": 9.4,
+    "sourceDevice": "Apple Shortcuts"
+  },
+  "bodyComposition": {
+    "date": "2026-06-26",
+    "weightKg": 88.9,
+    "percentBodyFat": 27.5,
+    "sourceDevice": "Apple Shortcuts"
+  }
+}

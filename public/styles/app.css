@@ -1470,3 +1470,18 @@ video {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Apple Health Shortcuts Bridge */
+.shortcut-credential-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:16px; }
+.shortcut-credential-grid > div { min-width:0; padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-2, rgba(255,255,255,.035)); }
+.shortcut-credential-grid small { display:block; color:var(--muted); margin-bottom:7px; }
+.shortcut-credential-grid code { display:block; max-width:100%; overflow-wrap:anywhere; white-space:normal; }
+.shortcut-credential-grid .mini-link { margin-top:8px; padding:0; border:0; background:none; color:var(--accent); cursor:pointer; }
+.shortcut-steps .list-item { align-items:flex-start; }
+.shortcut-json-help summary { cursor:pointer; font-weight:700; }
+.shortcut-json-help pre { margin:14px 0 0; padding:14px; overflow:auto; border-radius:14px; background:rgba(0,0,0,.25); font-size:12px; line-height:1.55; white-space:pre; }
+a[aria-disabled="true"] { pointer-events:none; opacity:.45; }
+@media (max-width:720px) {
+  .shortcut-credential-grid { grid-template-columns:1fr; }
+  .shortcut-json-help pre { font-size:11px; }
+}

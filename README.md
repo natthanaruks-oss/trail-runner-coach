@@ -310,3 +310,13 @@ Do not commit Apple Health exports, InBody files, FIT/TCX/GPX, app backups, OAut
 ## Visual system
 
 The UI uses native system fonts so Thai and English remain consistent in the PWA and offline mode. Typography, rings and navigation follow a clean connected-health visual language while retaining Trail Runner Coach branding and workflows.
+
+## Apple Health through iPhone Shortcuts
+
+Version 2.3.0 adds a separate Apple Health Shortcuts Bridge for users who do not build the native iOS Companion. Start with:
+
+```bash
+npm run setup:apple-health-shortcut
+```
+
+Then open **More → Devices & Connections → Apple Health** and import the generated `.local.json` setup result. See `docs/APPLE_HEALTH_SHORTCUTS_BRIDGE.md` for the iPhone Shortcut steps.

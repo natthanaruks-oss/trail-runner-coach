@@ -50,7 +50,14 @@ const required = [
   'scripts/setup-cloud-backup.mjs',
   'scripts/lib/cloud-backup-setup.mjs',
   'docs/ENCRYPTED_CLOUD_BACKUP.md',
-  'docs/GOOGLE_HEALTH_FITBIT.md'
+  'docs/GOOGLE_HEALTH_FITBIT.md',
+  'public/js/views/apple-health-shortcut.js',
+  'workers/apple-health-shortcut/src/index.js',
+  'workers/apple-health-shortcut/wrangler.example.jsonc',
+  'scripts/setup-apple-health-shortcut.mjs',
+  'scripts/lib/apple-health-shortcut-setup.mjs',
+  'docs/APPLE_HEALTH_SHORTCUTS_BRIDGE.md',
+  'examples/apple-health-shortcut-payload.example.json'
 ];
 
 for (const path of required) {
@@ -74,11 +81,11 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '2.2.0') throw new Error(`Expected package version 2.2.0, received ${packageJson.version}`);
+if (packageJson.version !== '2.3.0') throw new Error(`Expected package version 2.3.0, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v2.2.0')) throw new Error('Service-worker cache version was not bumped to 2.2.0');
+if (!serviceWorker.includes('trail-runner-coach-v2.3.0')) throw new Error('Service-worker cache version was not bumped to 2.3.0');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '2.2.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '2.3.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const dedupEngine = await readFile(resolve(root, 'public/js/core/activity-dedup.js'), 'utf8');
 if (!dedupEngine.includes('scoreActivityMatch') || !dedupEngine.includes('externalRefs')) throw new Error('Activity deduplication engine is incomplete');
 const activityImport = await readFile(resolve(root, 'public/js/adapters/activity-import.js'), 'utf8');
@@ -100,6 +107,13 @@ const wearableWorker = await readFile(resolve(root, 'workers/wearable-sync/src/i
 if (!wearableWorker.includes('fetchGoogleHealthPayload') || !wearableWorker.includes('health.googleapis.com/v4') || !wearableWorker.includes('google_health')) throw new Error('Google Health Worker adapter is incomplete');
 const googleSetup = await readFile(resolve(root, 'scripts/setup-google-health.mjs'), 'utf8');
 if (!googleSetup.includes('GOOGLE_HEALTH_CLIENT_ID') || !googleSetup.includes('google-health-setup-result.json')) throw new Error('Google Health setup wizard is incomplete');
+
+const appleShortcutAdapter = await readFile(resolve(root, 'public/js/adapters/apple-health.js'), 'utf8');
+if (!appleShortcutAdapter.includes('fetchAppleHealthShortcutPayload') || !appleShortcutAdapter.includes('shortcuts_bridge')) throw new Error('Apple Health Shortcuts app adapter is incomplete');
+const appleShortcutWorker = await readFile(resolve(root, 'workers/apple-health-shortcut/src/index.js'), 'utf8');
+if (!appleShortcutWorker.includes('APPLE_HEALTH_ENCRYPTION_KEY') || !appleShortcutWorker.includes('AES-GCM') || !appleShortcutWorker.includes('/v1/import')) throw new Error('Apple Health Shortcuts Worker is incomplete');
+const appleShortcutSetup = await readFile(resolve(root, 'scripts/setup-apple-health-shortcut.mjs'), 'utf8');
+if (!appleShortcutSetup.includes('apple-health-shortcut-setup-result.local.json') || !appleShortcutSetup.includes('APPLE_HEALTH_BRIDGE_TOKEN')) throw new Error('Apple Health Shortcuts setup wizard is incomplete');
 
 const backupCrypto = await readFile(resolve(root, 'public/js/core/cloud-backup-crypto.js'), 'utf8');
 if (!backupCrypto.includes('AES-GCM') || !backupCrypto.includes('PBKDF2') || !backupCrypto.includes('decryptSnapshot')) throw new Error('Encrypted cloud backup crypto is incomplete');

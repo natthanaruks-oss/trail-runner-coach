@@ -149,9 +149,12 @@ function sanitizeSnapshotSecrets(snapshot) {
   if (!Array.isArray(settingsRows)) return;
   for (const row of settingsRows) {
     const backup = row?.integrations?.cloudBackup;
-    if (!backup) continue;
-    backup.accessToken = '';
-    backup.rememberedKey = '';
-    backup.autoBackupEnabled = false;
+    if (backup) {
+      backup.accessToken = '';
+      backup.rememberedKey = '';
+      backup.autoBackupEnabled = false;
+    }
+    const appleShortcut = row?.integrations?.appleHealthShortcut;
+    if (appleShortcut) appleShortcut.accessToken = '';
   }
 }

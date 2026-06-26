@@ -1,9 +1,9 @@
 {
   "name": "trail-runner-coach",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
-  "description": "Mobile-first local-first bilingual trail coach with preserved wearable sync, adaptive training, recovery, nutrition and encrypted backup",
+  "description": "Mobile-first local-first bilingual trail coach with preserved wearable sync and Apple Health Shortcuts bridge",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",
@@ -12,7 +12,8 @@
     "deploy:dry-run": "npx wrangler deploy --dry-run",
     "setup:strava": "node scripts/setup-strava.mjs",
     "setup:backup": "node scripts/setup-cloud-backup.mjs",
-    "setup:google-health": "node scripts/setup-google-health.mjs"
+    "setup:google-health": "node scripts/setup-google-health.mjs",
+    "setup:apple-health-shortcut": "node scripts/setup-apple-health-shortcut.mjs"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.2.5",

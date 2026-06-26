@@ -1,4 +1,4 @@
-import { isAppleHealthBridgeAvailable } from '../adapters/apple-health.js';
+import { isAppleHealthAvailable, appleHealthConnectionMode } from '../adapters/apple-health.js';
 import {
   PROVIDER_DEFINITIONS,
   fetchProviderConnections,
@@ -49,7 +49,7 @@ export function renderConnectionsHome(container, state, app) {
     <section class="section">
       <div class="section-head"><h2>${en ? 'Your data sources' : 'แหล่งข้อมูลของคุณ'}</h2><span>${en ? 'Tap only what you need' : 'เลือกเฉพาะที่ใช้งาน'}</span></div>
       <div class="provider-compact-grid">
-        ${PRIMARY_PROVIDERS.map(provider => providerCompactCard(provider, syncState.providers[provider], configured, app.language)).join('')}
+        ${PRIMARY_PROVIDERS.map(provider => providerCompactCard(provider, syncState.providers[provider], configured, app.language, state.settings)).join('')}
       </div>
     </section>
 
@@ -68,17 +68,17 @@ export function renderConnectionsHome(container, state, app) {
   bindCompactActions(container, app);
 }
 
-function providerCompactCard(provider, syncInfo = {}, configured, language) {
+function providerCompactCard(provider, syncInfo = {}, configured, language, settings) {
   const en = language === 'en';
   const def = PROVIDER_DEFINITIONS[provider];
-  const connected = syncInfo.connected === true;
+  const appleReady = provider === 'apple_health' && isAppleHealthAvailable(settings);
+  const connected = syncInfo.connected === true || appleReady;
   const syncing = syncInfo.status === 'syncing';
-  const status = compactStatus(syncInfo, provider, language);
+  const status = compactStatus(syncInfo, provider, language, appleReady);
   const lastSync = syncInfo.lastSuccessAt ? formatTime(syncInfo.lastSuccessAt, language) : (en ? 'Never synced' : 'ยังไม่เคย Sync');
   const icon = providerIcon(provider);
   const canConnect = provider !== 'apple_health' && configured;
-  const appleReady = provider === 'apple_health' && isAppleHealthBridgeAvailable();
-  const canSync = connected || appleReady;
+  const appleMode = provider === 'apple_health' ? appleHealthConnectionMode(settings) : 'none';
 
   return `<article class="provider-compact-card card flat" data-compact-provider-card="${provider}">
     <div class="provider-compact-head">
@@ -93,7 +93,9 @@ function providerCompactCard(provider, syncInfo = {}, configured, language) {
     ${syncInfo.lastError ? `<div class="provider-inline-error">${escapeHtml(syncInfo.lastError)}</div>` : ''}
     <div class="provider-compact-actions">
       ${provider === 'apple_health'
-        ? `<button class="button ${appleReady ? 'primary' : 'secondary'}" type="button" data-compact-sync="apple_health" ${appleReady && !syncing ? '' : 'disabled'}>${appleReady ? (en ? 'Sync now' : 'Sync ตอนนี้') : (en ? 'Use iOS companion' : 'เปิดผ่าน iOS Companion')}</button>`
+        ? appleReady
+          ? `<button class="button primary" type="button" data-compact-sync="apple_health" ${!syncing ? '' : 'disabled'}>${syncing ? (en ? 'Syncing…' : 'กำลัง Sync…') : (en ? 'Sync now' : 'Sync ตอนนี้')}</button><a class="button ghost" href="#/apple-health-shortcut">${appleMode === 'native' ? (en ? 'Details' : 'รายละเอียด') : (en ? 'Manage' : 'จัดการ')}</a>`
+          : `<a class="button primary" href="#/apple-health-shortcut">${en ? 'Set up Shortcut' : 'ตั้งค่า Shortcut'}</a>`
         : connected
           ? `<button class="button primary" type="button" data-compact-sync="${provider}" ${syncing ? 'disabled' : ''}>${syncing ? (en ? 'Syncing…' : 'กำลัง Sync…') : (en ? 'Sync now' : 'Sync ตอนนี้')}</button>`
           : `<button class="button primary" type="button" data-compact-connect="${provider}" ${canConnect ? '' : 'disabled'}>${en ? 'Connect' : 'เชื่อมต่อ'}</button>`}
@@ -159,12 +161,12 @@ function bindCompactActions(container, app) {
   }));
 }
 
-function compactStatus(info = {}, provider, language) {
+function compactStatus(info = {}, provider, language, appleReady = false) {
   const en = language === 'en';
   if (info.status === 'syncing') return { label: en ? 'Syncing' : 'กำลัง Sync', className: 'neutral' };
   if (['failed', 'error', 'auth_error'].includes(info.status)) return { label: en ? 'Needs attention' : 'ต้องตรวจสอบ', className: 'red' };
   if (info.status === 'queued') return { label: en ? 'Retry queued' : 'รอ Retry', className: 'yellow' };
-  if (info.connected === true || (provider === 'apple_health' && isAppleHealthBridgeAvailable())) return { label: en ? 'Connected' : 'เชื่อมต่อแล้ว', className: 'green' };
+  if (info.connected === true || (provider === 'apple_health' && appleReady)) return { label: en ? 'Connected' : 'เชื่อมต่อแล้ว', className: 'green' };
   return { label: en ? 'Not connected' : 'ยังไม่เชื่อมต่อ', className: 'yellow' };
 }
 

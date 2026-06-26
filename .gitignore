@@ -29,3 +29,6 @@ workers/cloud-backup/wrangler.jsonc
 cloud-backup-setup-result.json
 *cloud-backup-recovery-kit*.json
 *recovery-kit*.json
+
+# Local Apple Health Shortcuts Bridge setup (contains a secret token)
+apple-health-shortcut-setup-result.local.json

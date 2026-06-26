@@ -4,9 +4,35 @@ import { importActivitiesWithDedup } from './activity-import.js';
 
 const BRIDGE_HANDLER = 'trailRunnerHealthKit';
 const DEFAULT_TIMEOUT_MS = 120000;
+const SHORTCUT_PROVIDER = 'apple_health_shortcut';
 
 export function isAppleHealthBridgeAvailable() {
   return Boolean(globalThis.window?.webkit?.messageHandlers?.[BRIDGE_HANDLER]?.postMessage);
+}
+
+export function getAppleHealthShortcutConfig(settings) {
+  const value = settings?.integrations?.appleHealthShortcut || {};
+  return {
+    baseUrl: normalizeShortcutBaseUrl(value.baseUrl || ''),
+    accessToken: String(value.accessToken || '').trim(),
+    shortcutName: String(value.shortcutName || 'TRC Apple Health Sync').trim() || 'TRC Apple Health Sync',
+    configuredAt: value.configuredAt || null
+  };
+}
+
+export function isAppleHealthShortcutConfigured(settings) {
+  const config = getAppleHealthShortcutConfig(settings);
+  return Boolean(config.baseUrl && config.accessToken.length >= 32);
+}
+
+export function isAppleHealthAvailable(settings) {
+  return isAppleHealthBridgeAvailable() || isAppleHealthShortcutConfigured(settings);
+}
+
+export function appleHealthConnectionMode(settings) {
+  if (isAppleHealthBridgeAvailable()) return 'native';
+  if (isAppleHealthShortcutConfigured(settings)) return 'shortcut';
+  return 'none';
 }
 
 export function requestAppleHealthAuthorization() {
@@ -15,6 +41,78 @@ export function requestAppleHealthAuthorization() {
 
 export function requestAppleHealthSync({ days = 90, includeRoutes = false } = {}) {
   return postBridgeRequest('sync', { days, includeRoutes });
+}
+
+export async function requestAppleHealthPayload(settings, { days = 90, includeRoutes = false } = {}) {
+  if (isAppleHealthBridgeAvailable()) return requestAppleHealthSync({ days, includeRoutes });
+  if (isAppleHealthShortcutConfigured(settings)) return fetchAppleHealthShortcutPayload(settings, { days });
+  const error = new Error('Apple Health ยังไม่ได้เชื่อมต่อ: ตั้งค่า Shortcuts Bridge หรือเปิดผ่าน iOS Companion');
+  error.code = 'not_connected';
+  error.status = 409;
+  throw error;
+}
+
+export async function fetchAppleHealthShortcutStatus(settings) {
+  const config = getAppleHealthShortcutConfig(settings);
+  if (!config.baseUrl) throw new Error('ยังไม่ได้ตั้งค่า Apple Health Shortcut Worker URL');
+  const response = await fetch(`${config.baseUrl}/setup/status`, { cache: 'no-store' });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw createShortcutError(payload.message || `ตรวจ Worker ไม่สำเร็จ (${response.status})`, response, payload);
+  return payload;
+}
+
+export async function fetchAppleHealthShortcutPayload(settings, { days = 90 } = {}) {
+  const config = getAppleHealthShortcutConfig(settings);
+  if (!config.baseUrl || config.accessToken.length < 32) throw new Error('Apple Health Shortcuts Bridge ยังตั้งค่าไม่ครบ');
+  const response = await fetch(`${config.baseUrl}/v1/sync?days=${Math.max(1, Math.min(365, Number(days) || 90))}`, {
+    headers: { Authorization: `Bearer ${config.accessToken}` },
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw createShortcutError(payload.message || `Sync Apple Health ไม่สำเร็จ (${response.status})`, response, payload);
+  return payload;
+}
+
+export async function clearAppleHealthShortcutData(settings) {
+  const config = getAppleHealthShortcutConfig(settings);
+  if (!config.baseUrl || config.accessToken.length < 32) throw new Error('Apple Health Shortcuts Bridge ยังตั้งค่าไม่ครบ');
+  const response = await fetch(`${config.baseUrl}/v1/data`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${config.accessToken}` }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw createShortcutError(payload.message || `ลบข้อมูลไม่สำเร็จ (${response.status})`, response, payload);
+  return payload;
+}
+
+export function parseAppleHealthShortcutSetupReceipt(value) {
+  const receipt = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!receipt || receipt.provider !== SHORTCUT_PROVIDER || Number(receipt.schemaVersion) !== 1) {
+    throw new Error('ไฟล์ Apple Health Shortcut setup ไม่ถูกต้อง');
+  }
+  const baseUrl = normalizeShortcutBaseUrl(receipt.workerUrl || receipt.baseUrl);
+  const accessToken = String(receipt.accessToken || '').trim();
+  if (!baseUrl || accessToken.length < 32) throw new Error('ไฟล์ Setup ไม่มี Worker URL หรือ Bridge Token ที่ถูกต้อง');
+  return {
+    baseUrl,
+    accessToken,
+    shortcutName: String(receipt.shortcutName || 'TRC Apple Health Sync').trim() || 'TRC Apple Health Sync',
+    configuredAt: new Date().toISOString()
+  };
+}
+
+export function normalizeShortcutBaseUrl(value) {
+  const input = String(value || '').trim().replace(/\/$/, '');
+  if (!input) return '';
+  let url;
+  try { url = new URL(input); } catch { throw new Error('Apple Health Worker URL ไม่ถูกต้อง'); }
+  if (url.protocol !== 'https:' || url.pathname !== '/' || url.search || url.hash) throw new Error('ใส่เฉพาะ Worker origin ที่ขึ้นต้นด้วย https://');
+  return url.origin;
+}
+
+export function buildAppleShortcutRunUrl(settings) {
+  const name = getAppleHealthShortcutConfig(settings).shortcutName;
+  return `shortcuts://run-shortcut?name=${encodeURIComponent(name)}`;
 }
 
 function postBridgeRequest(action, payload) {
@@ -83,6 +181,7 @@ export function normalizeAppleHealthPayload(payload, settings = {}) {
     wearable: {
       sourceDevice: metric.sourceDevice || null,
       sourceBundle: metric.sourceBundle || null,
+      transport: payload.transport || (isAppleHealthBridgeAvailable() ? 'healthkit' : 'shortcuts_bridge'),
       importedAt: exportedAt
     },
     updatedAt: exportedAt
@@ -152,6 +251,7 @@ export async function importAppleHealthPayload(appStore, payload) {
     status: 'success',
     lastSyncAt: normalized.exportedAt,
     range: payload.range || null,
+    transport: payload.transport || (isAppleHealthBridgeAvailable() ? 'healthkit' : 'shortcuts_bridge'),
     counts: {
       dailyMetrics: normalized.checkins.length,
       activities: normalized.activities.length,
@@ -212,4 +312,11 @@ function numberOrNull(value) {
 
 function numberOrZero(value) {
   return numberOrNull(value) || 0;
+}
+
+function createShortcutError(message, response, payload = {}) {
+  const error = new Error(message);
+  error.status = Number(response?.status || 0);
+  error.code = payload?.code || null;
+  return error;
 }

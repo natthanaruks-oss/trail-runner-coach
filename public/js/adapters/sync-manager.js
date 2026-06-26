@@ -8,8 +8,8 @@ import {
 } from './provider-sync.js';
 import {
   importAppleHealthPayload,
-  isAppleHealthBridgeAvailable,
-  requestAppleHealthSync
+  isAppleHealthAvailable,
+  requestAppleHealthPayload
 } from './apple-health.js';
 import { importGoogleHealthPayload } from './google-health.js';
 
@@ -35,7 +35,7 @@ let lifecycleStore = null;
 function emptyProvider(provider) {
   return {
     provider,
-    connected: provider === 'apple_health' ? isAppleHealthBridgeAvailable() : null,
+    connected: provider === 'apple_health' ? false : null,
     status: 'idle',
     lastAttemptAt: null,
     lastSuccessAt: null,
@@ -157,13 +157,7 @@ function sanitizeResult(result = {}) {
 
 async function executeProviderSync(appStore, provider, days) {
   if (provider === 'apple_health') {
-    if (!isAppleHealthBridgeAvailable()) {
-      const error = new Error('Apple Health ต้องเปิดผ่าน iOS Companion');
-      error.code = 'not_connected';
-      error.status = 409;
-      throw error;
-    }
-    const payload = await requestAppleHealthSync({ days });
+    const payload = await requestAppleHealthPayload(appStore.getState().settings, { days });
     const imported = await importAppleHealthPayload(appStore, payload);
     return sanitizeResult({
       fetched: Number(imported.activities || 0),
@@ -253,7 +247,7 @@ export async function syncProviderNow(appStore, provider, {
     if (resetRetry) removeProviderQueue(syncState, provider);
     syncState.providers[provider] = {
       ...previous,
-      connected: provider === 'apple_health' ? isAppleHealthBridgeAvailable() : previous.connected,
+      connected: provider === 'apple_health' ? isAppleHealthAvailable(appStore.getState().settings) : previous.connected,
       status: 'syncing',
       lastAttemptAt: nowIso(),
       lastError: null,
@@ -324,14 +318,30 @@ export async function updateConnectionSnapshot(appStore, connectionPayload = nul
     };
     if (!connected) removeProviderQueue(syncState, provider);
   }
+  const appleHealthConnected = isAppleHealthAvailable(appStore.getState().settings);
   syncState.providers.apple_health = {
     ...syncState.providers.apple_health,
-    connected: isAppleHealthBridgeAvailable(),
-    status: isAppleHealthBridgeAvailable()
+    connected: appleHealthConnected,
+    status: appleHealthConnected
       ? (syncState.providers.apple_health.status === 'not_connected' ? 'idle' : syncState.providers.apple_health.status)
       : 'not_connected',
     updatedAt: nowIso()
   };
+  return persistSyncState(appStore, syncState);
+}
+
+export async function updateAppleHealthConnectionSnapshot(appStore) {
+  const syncState = getSyncState(appStore.getState());
+  const connected = isAppleHealthAvailable(appStore.getState().settings);
+  syncState.providers.apple_health = {
+    ...syncState.providers.apple_health,
+    connected,
+    status: connected
+      ? (syncState.providers.apple_health.status === 'not_connected' ? 'idle' : syncState.providers.apple_health.status)
+      : 'not_connected',
+    updatedAt: nowIso()
+  };
+  if (!connected) removeProviderQueue(syncState, 'apple_health');
   return persistSyncState(appStore, syncState);
 }
 
