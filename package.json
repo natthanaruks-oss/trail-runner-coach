@@ -1,9 +1,9 @@
 {
   "name": "trail-runner-coach",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "type": "module",
-  "description": "Mobile-first local-first bilingual trail coach with preserved wearable sync and Apple Health Shortcuts bridge",
+  "description": "Mobile-first local-first bilingual trail coach with preserved wearable sync and Apple Health insights, visible score impact and Shortcuts bridge",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",

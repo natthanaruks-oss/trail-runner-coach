@@ -62,7 +62,9 @@ export function nutritionTarget(state, dateKey = localDateKey()) {
   const checkin = state.checkins.find(item => item.date === dateKey);
   const appleActive = number(checkin?.activeEnergyKcal);
   const activityFactor = number(state.settings?.preferences?.nonExerciseActivityFactor) || 1.2;
-  const baseOut = Math.round(bmr.value * activityFactor);
+  // Apple Health Active Energy already represents calories burned above resting metabolism.
+  // When it is available, combine it with BMR directly so sedentary activity is not counted twice.
+  const baseOut = appleActive > 0 ? bmr.value : Math.round(bmr.value * activityFactor);
   const activityOut = appleActive > 0 ? appleActive : estimateExerciseEnergy(state, dateKey, plan);
   const hard = /Long|B2B|Night|Hill|Tempo|Race/.test(sessionType);
   const phase = getPlanContext(state, dateKey)?.week?.phase || '';
@@ -77,8 +79,10 @@ export function nutritionTarget(state, dateKey = localDateKey()) {
     waterMl: dailyWaterTargetMl(state, dateKey),
     bmrKcal: bmr.value,
     bmrSource: bmr.source,
+    restingEnergyKcal: baseOut,
     activeEnergyKcal: activityOut,
     activitySource: appleActive > 0 ? 'apple_health' : 'estimated_from_training',
+    totalOutSource: appleActive > 0 ? 'bmr_plus_apple_active_energy' : 'activity_factor_plus_training_estimate',
     mode: hard || buildPeak ? 'fuel_recovery' : 'maintenance',
     sessionType,
     phase
@@ -89,7 +93,7 @@ export function energyBalanceForDate(state, dateKey = localDateKey()) {
   const totals = foodTotals(state, dateKey);
   const target = nutritionTarget(state, dateKey);
   const flag = state.dailyFlags.find(item => item.date === dateKey);
-  const totalOut = target.bmrKcal * (number(state.settings?.preferences?.nonExerciseActivityFactor) || 1.2) + target.activeEnergyKcal;
+  const totalOut = target.restingEnergyKcal + target.activeEnergyKcal;
   return {
     date: dateKey,
     intakeKcal: Math.round(totals.kcal),

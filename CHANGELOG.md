@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.4.0 — Apple Health Insights & Score Impact
+
+- Added a visible Apple Health snapshot to Today with Steps, Active Energy, Exercise Minutes, Walking/Running Distance, Sleep, Resting HR and HRV.
+- Added clear downstream-use cards showing how movement affects Strain, sleep/vitals affect Recovery, and Active Energy affects the daily fuel target.
+- Added 7-day Apple Health coverage and averages to the Apple Health screen.
+- Added one-tap Pull Latest on Today and retained automatic provider sync after the first successful import.
+- Added an Apple Health insight selector with source, last-sync, trend, data-coverage and body-composition context.
+- Updated calorie expenditure logic to use BMR + Apple Active Energy when Apple Health data is available, avoiding double-counting the sedentary activity factor.
+- Kept Strava as the workout source of truth and did not create Apple Health workout records from the Shortcut.
+- Collapsed one-time Bridge setup into Advanced Settings after configuration, keeping daily data and actions visible first.
+- Preserved both sync Workers, OAuth routes, KV bindings, secrets, token storage, provider adapters, sync manager and IndexedDB schema unchanged.
+- Bumped package, application and PWA cache versions to 2.4.0.
+- Repository verification, Cloudflare dry-run and all 62 automated tests passed.
+
 ## 2.2.0 — Mobile App UX & Navigation
 
 - Rebuilt the primary journey around five daily destinations: Today, Plan, Train, Food and More.

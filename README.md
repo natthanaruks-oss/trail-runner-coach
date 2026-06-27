@@ -311,6 +311,18 @@ Do not commit Apple Health exports, InBody files, FIT/TCX/GPX, app backups, OAut
 
 The UI uses native system fonts so Thai and English remain consistent in the PWA and offline mode. Typography, rings and navigation follow a clean connected-health visual language while retaining Trail Runner Coach branding and workflows.
 
+
+## Apple Health insights in v2.4.0
+
+After the iPhone Shortcut sends data and the app pulls the latest payload, the **Today** screen now shows the imported Apple Health metrics and explains exactly where they are used:
+
+- Steps, Active Energy and Exercise Minutes contribute to daily behavior load and Strain.
+- Sleep, Resting HR and HRV contribute to Recovery, rolling baselines and Readiness confidence.
+- Apple Active Energy is combined with BMR for the daily calorie/fuel target without adding a sedentary activity factor again.
+- Weight and Body Fat continue into Body Composition trends.
+
+Strava remains the workout source of truth, so the Shortcut should not send workout records while Strava is connected.
+
 ## Apple Health through iPhone Shortcuts
 
 Version 2.3.0 adds a separate Apple Health Shortcuts Bridge for users who do not build the native iOS Companion. Start with:

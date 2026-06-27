@@ -1,4 +1,5 @@
 import { selectRaceCountdown, selectToday, selectWeekSummary, selectRecentActivities } from '../core/selectors.js';
+import { selectAppleHealthInsights } from '../core/health-insights.js';
 import { recommendSession } from '../engines/recommendation.js';
 import { formatNumber, metricCard, pageHeader, statusBadge, escapeHtml } from './components.js';
 import { formatThaiDate } from '../core/date.js';
@@ -6,6 +7,7 @@ import { raceSummary } from '../core/races.js';
 import { foodTotals, nutritionTarget, dailyWaterTargetMl } from '../core/nutrition.js';
 import { STORES } from '../core/constants.js';
 import { nowIso } from '../core/date.js';
+import { syncProviderNow } from '../adapters/sync-manager.js';
 
 export function renderDashboard(container, state, app) {
   const today = selectToday(state);
@@ -18,6 +20,8 @@ export function renderDashboard(container, state, app) {
   const nutritionPlan = nutritionTarget(state, today.dateKey);
   const water = state.waterLogs.find(item => item.date === today.dateKey)?.amountMl || 0;
   const waterTarget = dailyWaterTargetMl(state, today.dateKey);
+  const health = selectAppleHealthInsights(state, today.dateKey, 7);
+  const en = app.language === 'en';
   const readinessLabel = today.readiness
     ? readinessStatus === 'green' ? 'พร้อมซ้อม' : readinessStatus === 'yellow' ? 'ลดโหลด' : 'พัก/ประเมินอาการ'
     : 'ยังไม่ได้ Check-in';
@@ -53,6 +57,8 @@ export function renderDashboard(container, state, app) {
         <div><strong>Readiness</strong><span>Recovery เทียบกับ Pain Safety Gate และแนวโน้มโหลด</span></div>
       </div>
     </section>
+
+    ${renderAppleHealthSummary(health, today, en)}
 
     <section class="grid three section">
       ${metricCard(countdown.race ? `ถึง ${escapeHtml(countdown.race.name)}` : 'วันแข่งขัน', countdown.race ? countdown.days : '—', countdown.race ? 'วัน' : '', countdown.race ? `${countdown.weeks} สัปดาห์ ${countdown.remainderDays} วัน` : 'ยังไม่มีสนามที่เลือก')}
@@ -118,6 +124,105 @@ export function renderDashboard(container, state, app) {
     await app.store.upsertRecord(STORES.WATER_LOGS, { date: today.dateKey, amountMl: current + Number(button.dataset.dashboardWater), source: 'manual', updatedAt: nowIso() });
     app.toast('เพิ่มน้ำดื่มแล้ว'); app.render();
   }));
+  container.querySelector('[data-dashboard-apple-sync]')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.textContent = en ? 'Pulling…' : 'กำลังดึง…';
+    try {
+      await syncProviderNow(app.store, 'apple_health', { days: 30, trigger: 'dashboard_manual', resetRetry: true });
+      app.toast(en ? 'Apple Health updated' : 'อัปเดต Apple Health แล้ว');
+      app.render();
+    } catch (error) {
+      app.toast(error.message || (en ? 'Apple Health sync failed' : 'ดึง Apple Health ไม่สำเร็จ'));
+      button.disabled = false;
+      button.textContent = en ? 'Pull latest' : 'ดึงข้อมูลล่าสุด';
+    }
+  });
+}
+
+function renderAppleHealthSummary(health, today, en) {
+  const metricDefinitions = [
+    ['steps', en ? 'Steps' : 'ก้าว', '', 'Strain'],
+    ['activeEnergyKcal', en ? 'Active energy' : 'พลังงานกิจกรรม', 'kcal', en ? 'Calories' : 'แคลอรี'],
+    ['exerciseMinutes', en ? 'Exercise' : 'เวลาออกกำลัง', en ? 'min' : 'นาที', 'Strain'],
+    ['walkingRunningDistanceKm', en ? 'Walk + run' : 'เดิน + วิ่ง', 'km', en ? 'Context' : 'บริบท'],
+    ['sleepHours', en ? 'Sleep' : 'การนอน', en ? 'h' : 'ชม.', 'Recovery'],
+    ['restingHr', 'Resting HR', 'bpm', 'Recovery'],
+    ['hrvMs', 'HRV', 'ms', 'Recovery']
+  ];
+  const syncText = health.lastImportedAt
+    ? `${en ? 'Updated' : 'อัปเดต'} ${formatHealthTimestamp(health.lastImportedAt, en)}`
+    : (en ? 'No imported data yet' : 'ยังไม่มีข้อมูลที่นำเข้า');
+  const behavior = today.strain.behaviorLoad;
+  const recovery = today.recovery;
+  const energy = health.nutrition;
+  const balance = energy.balance;
+  const sourceText = health.wearable?.transport === 'shortcuts_bridge'
+    ? 'Apple Shortcuts'
+    : health.wearable?.transport === 'healthkit' ? 'HealthKit' : 'Apple Health';
+
+  return `<section class="section health-summary-section">
+    <div class="section-head"><h2>${en ? 'Apple Health today' : 'Apple Health วันนี้'}</h2><span>${escapeHtml(syncText)}</span></div>
+    <article class="card flat health-summary-card ${health.hasData ? 'has-data' : ''}">
+      <div class="health-summary-toolbar">
+        <div><span class="status ${health.hasData ? 'green' : 'yellow'}">${health.hasData ? (en ? 'Data received' : 'รับข้อมูลแล้ว') : (en ? 'Waiting for shortcut' : 'รอข้อมูลจาก Shortcut')}</span><small>${escapeHtml(sourceText)}</small></div>
+        <div class="button-row"><button class="button secondary compact" type="button" data-dashboard-apple-sync>${en ? 'Pull latest' : 'ดึงข้อมูลล่าสุด'}</button><a class="button ghost compact" href="#/apple-health-shortcut">${en ? 'Manage' : 'จัดการ'}</a></div>
+      </div>
+      <div class="health-metric-grid">
+        ${metricDefinitions.map(([key, label, unit, usedBy]) => healthMetricCard(label, health.metrics[key], unit, usedBy, en)).join('')}
+      </div>
+      <div class="health-impact-grid">
+        ${healthImpactCard(
+          en ? 'Daily movement → Strain' : 'การเคลื่อนไหว → Strain',
+          behavior?.score == null ? '—' : `${formatNumber(behavior.score)}/100`,
+          behavior?.score == null
+            ? (en ? 'Add Steps, Active Energy or Exercise Minutes.' : 'เพิ่ม Steps, Active Energy หรือ Exercise Minutes')
+            : `${en ? 'Adds' : 'เพิ่ม'} ${formatNumber(today.strain.behaviorContribution21, 1)} / 21 ${en ? 'to daily strain' : 'เข้า Daily Strain'}`,
+          behavior?.score == null ? 'neutral' : behavior.score >= 85 ? 'yellow' : 'green'
+        )}
+        ${healthImpactCard(
+          en ? 'Sleep & vitals → Recovery' : 'การนอนและชีพจร → Recovery',
+          `${health.recoveryAvailable}/${health.recoveryTotal}`,
+          recovery?.score == null
+            ? (en ? 'Build Sleep, RHR and HRV history for a recovery score.' : 'เก็บ Sleep, RHR และ HRV เพื่อสร้าง Recovery Score')
+            : `${en ? 'Recovery' : 'Recovery'} ${formatNumber(recovery.score)}/100 · ${en ? 'confidence' : 'ความมั่นใจ'} ${recovery.confidence}%`,
+          recovery?.score == null ? 'neutral' : recovery.score >= 75 ? 'green' : recovery.score >= 50 ? 'yellow' : 'red'
+        )}
+        ${healthImpactCard(
+          en ? 'Active energy → Fuel target' : 'Active Energy → เป้าพลังงาน',
+          energy.usesAppleActiveEnergy ? `${formatNumber(energy.target.activeEnergyKcal)} kcal` : '—',
+          energy.usesAppleActiveEnergy
+            ? (balance.foodComplete
+              ? `${en ? 'Current balance' : 'สมดุลปัจจุบัน'} ${signedKcal(balance.netKcal)}`
+              : `${en ? 'Used in today’s' : 'ใช้กำหนดเป้า'} ${formatNumber(energy.target.kcal)} kcal ${en ? 'fuel target' : 'วันนี้'}`)
+            : (en ? 'Using training estimate until Active Energy arrives.' : 'ใช้ค่าประมาณจากแผนซ้อมจนกว่าจะมี Active Energy'),
+          energy.usesAppleActiveEnergy ? 'green' : 'neutral'
+        )}
+      </div>
+      ${health.hasData ? `<div class="health-trend-line"><strong>${en ? '7-day view' : 'ภาพรวม 7 วัน'}</strong><span>${health.trend.coverageDays}/${health.trend.days} ${en ? 'days with Apple Health data' : 'วันที่มีข้อมูล Apple Health'} · ${en ? 'average steps' : 'ก้าวเฉลี่ย'} ${health.trend.averages.steps == null ? '—' : formatNumber(health.trend.averages.steps)}</span></div>` : `<div class="callout section">${en ? 'Run the Shortcut, then tap Pull latest. Steps affect Strain; Sleep, RHR and HRV affect Recovery; Active Energy affects the calorie target.' : 'รัน Shortcut แล้วกดดึงข้อมูลล่าสุด: Steps ใช้กับ Strain, Sleep/RHR/HRV ใช้กับ Recovery และ Active Energy ใช้กับเป้าแคลอรี'}</div>`}
+    </article>
+  </section>`;
+}
+
+function healthMetricCard(label, value, unit, usedBy, en) {
+  const available = value != null;
+  const decimals = ['km', 'h', 'ชม.'].includes(unit) ? 1 : 0;
+  return `<div class="health-metric ${available ? 'available' : 'missing'}"><div class="health-metric-head"><span>${escapeHtml(label)}</span><i>${escapeHtml(usedBy)}</i></div><strong>${available ? formatNumber(value, decimals) : '—'}${available && unit ? `<small>${escapeHtml(unit)}</small>` : ''}</strong><em>${available ? (en ? 'Apple Health' : 'จาก Apple Health') : (en ? 'Not received' : 'ยังไม่มีข้อมูล')}</em></div>`;
+}
+
+function healthImpactCard(label, value, detail, status) {
+  return `<div class="health-impact"><span class="status ${status}">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(detail)}</small></div>`;
+}
+
+function formatHealthTimestamp(value, en) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || '—');
+  return date.toLocaleString(en ? 'en-GB' : 'th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function signedKcal(value) {
+  const number = Number(value) || 0;
+  return `${number > 0 ? '+' : ''}${formatNumber(number)} kcal`;
 }
 
 function scoreRing({ label, value, max, normalized, color, sub }) {

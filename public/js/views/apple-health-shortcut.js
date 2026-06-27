@@ -8,7 +8,9 @@ import {
   parseAppleHealthShortcutSetupReceipt
 } from '../adapters/apple-health.js';
 import { syncProviderNow, updateAppleHealthConnectionSnapshot } from '../adapters/sync-manager.js';
-import { escapeHtml, pageHeader } from './components.js';
+import { escapeHtml, formatNumber, pageHeader } from './components.js';
+import { selectAppleHealthInsights } from '../core/health-insights.js';
+import { selectToday } from '../core/selectors.js';
 
 export function renderAppleHealthShortcut(container, state, app) {
   const en = app.language === 'en';
@@ -17,6 +19,8 @@ export function renderAppleHealthShortcut(container, state, app) {
   const mode = appleHealthConnectionMode(state.settings);
   const importUrl = config.baseUrl ? `${config.baseUrl}/v1/import` : '';
   const tokenMask = config.accessToken ? `${config.accessToken.slice(0, 5)}••••••••${config.accessToken.slice(-4)}` : '—';
+  const health = selectAppleHealthInsights(state);
+  const today = selectToday(state);
 
   container.innerHTML = `
     ${pageHeader(
@@ -37,6 +41,11 @@ export function renderAppleHealthShortcut(container, state, app) {
       </div>
     </section>
 
+    ${renderHealthData(health, today, en)}
+
+    <details class="health-advanced-settings" ${configured ? '' : 'open'}>
+      <summary><span>${en ? 'Bridge setup and advanced settings' : 'ตั้งค่า Bridge และตัวเลือกขั้นสูง'}</span><small>${configured ? (en ? 'Configured' : 'ตั้งค่าแล้ว') : (en ? 'Setup required' : 'ต้องตั้งค่า')}</small></summary>
+      <div class="health-advanced-settings-body">
     <section class="section">
       <div class="section-head"><h2>${en ? '1. Deploy the separate bridge' : '1. Deploy Bridge แยกจาก Strava'}</h2><span>${en ? 'One-time setup' : 'ทำครั้งเดียว'}</span></div>
       <article class="card flat wizard-step">
@@ -101,10 +110,69 @@ export function renderAppleHealthShortcut(container, state, app) {
 }</pre>
       </details>
     </section>
+      </div>
+    </details>
 
     <section class="section callout"><strong>${en ? 'Data ownership rule' : 'กติกาแหล่งข้อมูล'}:</strong> ${en ? 'Do not add workout actions to the Shortcut while Strava is connected. This avoids duplicate activities.' : 'ระหว่างที่ Strava เชื่อมอยู่ ไม่ต้องใส่ Workout ใน Shortcut เพื่อลดกิจกรรมซ้ำ'}</section>`;
 
   bindActions(container, app);
+}
+
+function renderHealthData(health, today, en) {
+  const metrics = [
+    ['steps', en ? 'Steps' : 'ก้าว', '', 'Strain'],
+    ['activeEnergyKcal', en ? 'Active energy' : 'พลังงานกิจกรรม', 'kcal', en ? 'Fuel target' : 'เป้าพลังงาน'],
+    ['exerciseMinutes', en ? 'Exercise' : 'เวลาออกกำลัง', en ? 'min' : 'นาที', 'Strain'],
+    ['walkingRunningDistanceKm', en ? 'Walk + run' : 'เดิน + วิ่ง', 'km', en ? 'Context' : 'บริบท'],
+    ['sleepHours', en ? 'Sleep' : 'การนอน', en ? 'h' : 'ชม.', 'Recovery'],
+    ['restingHr', 'Resting HR', 'bpm', 'Recovery'],
+    ['hrvMs', 'HRV', 'ms', 'Recovery']
+  ];
+  const lastSync = health.lastImportedAt ? formatTimestamp(health.lastImportedAt, en) : '—';
+  const body = health.latestBody;
+  const behavior = today.strain.behaviorLoad;
+  const energy = health.nutrition;
+  return `<section class="section">
+    <div class="section-head"><h2>${en ? 'Latest Apple Health data' : 'ข้อมูล Apple Health ล่าสุด'}</h2><span>${en ? 'Last sync' : 'Sync ล่าสุด'} ${escapeHtml(lastSync)}</span></div>
+    ${health.hasData ? `<article class="card flat">
+      <div class="health-metric-grid">
+        ${metrics.map(([key,label,unit,usage]) => healthValue(label, health.metrics[key], unit, usage, en)).join('')}
+      </div>
+      <div class="health-trend-grid section">
+        ${trendValue(en ? '7-day average steps' : 'ก้าวเฉลี่ย 7 วัน', health.trend.averages.steps, '')}
+        ${trendValue(en ? 'Average sleep' : 'การนอนเฉลี่ย', health.trend.averages.sleepHours, en ? 'h' : 'ชม.')}
+        ${trendValue(en ? 'Average RHR' : 'RHR เฉลี่ย', health.trend.averages.restingHr, 'bpm')}
+        ${trendValue(en ? 'Average HRV' : 'HRV เฉลี่ย', health.trend.averages.hrvMs, 'ms')}
+      </div>
+      <div class="health-usage-list section">
+        ${usageRow(en ? 'Steps + Active Energy + Exercise Minutes' : 'Steps + Active Energy + Exercise Minutes', en ? 'Adjust daily behavior load and Strain without creating duplicate workouts.' : 'ปรับ Behavior Load และ Daily Strain โดยไม่สร้าง Workout ซ้ำ', behavior?.score == null ? '—' : `${formatNumber(behavior.score)}/100`)}
+        ${usageRow(en ? 'Sleep + RHR + HRV' : 'Sleep + RHR + HRV', en ? 'Build Recovery, baseline and Readiness confidence.' : 'สร้าง Recovery, Baseline และความมั่นใจของ Readiness', today.recovery?.score == null ? `${health.recoveryAvailable}/3` : `${formatNumber(today.recovery.score)}/100`)}
+        ${usageRow(en ? 'Active Energy' : 'Active Energy', en ? 'Sets the fuel target using BMR + Apple Active Energy, avoiding double counting.' : 'กำหนดเป้าพลังงานจาก BMR + Apple Active Energy โดยไม่บวกกิจกรรมซ้ำ', energy.usesAppleActiveEnergy ? `${formatNumber(energy.target.kcal)} kcal` : '—')}
+        ${usageRow(en ? 'Weight + Body Fat' : 'Weight + Body Fat', en ? 'Feeds Body Composition trends and nutrition calculations.' : 'ใช้ในแนวโน้ม Body Composition และการคำนวณโภชนาการ', body ? `${formatNumber(body.weightKg,1)} kg` : '—')}
+      </div>
+      <div class="button-row section"><a class="button secondary" href="#/scores">${en ? 'Open score details' : 'ดูรายละเอียดคะแนน'}</a><a class="button secondary" href="#/fuel">${en ? 'Open calories' : 'ดูพลังงานและอาหาร'}</a><a class="button secondary" href="#/body">${en ? 'Open body trends' : 'ดูแนวโน้มร่างกาย'}</a></div>
+    </article>` : `<div class="card flat empty">${en ? 'No Apple Health data has been pulled into the app yet. Run the Shortcut, then tap Pull latest data.' : 'ยังไม่มีข้อมูล Apple Health ในแอป ให้รัน Shortcut แล้วกด “ดึงข้อมูลล่าสุด”'}</div>`}
+  </section>`;
+}
+
+function healthValue(label, value, unit, usage, en) {
+  const available = value != null;
+  const decimals = ['km', 'h', 'ชม.'].includes(unit) ? 1 : 0;
+  return `<div class="health-metric ${available ? 'available' : 'missing'}"><div class="health-metric-head"><span>${escapeHtml(label)}</span><i>${escapeHtml(usage)}</i></div><strong>${available ? formatNumber(value, decimals) : '—'}${available && unit ? `<small>${escapeHtml(unit)}</small>` : ''}</strong><em>${available ? (en ? 'Imported' : 'นำเข้าแล้ว') : (en ? 'Not received' : 'ยังไม่มีข้อมูล')}</em></div>`;
+}
+
+function trendValue(label, value, unit) {
+  return `<div class="health-trend-card"><small>${escapeHtml(label)}</small><strong>${value == null ? '—' : formatNumber(value, unit === 'h' || unit === 'ชม.' ? 1 : 0)}${value != null && unit ? ` <small>${escapeHtml(unit)}</small>` : ''}</strong></div>`;
+}
+
+function usageRow(label, detail, value) {
+  return `<div><div><strong>${escapeHtml(label)}</strong><small>${escapeHtml(detail)}</small></div><span class="status neutral">${escapeHtml(value)}</span></div>`;
+}
+
+function formatTimestamp(value, en) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || '—');
+  return date.toLocaleString(en ? 'en-GB' : 'th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
 }
 
 function bindActions(container, app) {
@@ -154,6 +222,8 @@ function bindActions(container, app) {
       const summary = result.result || {};
       setStatus(container, app.language === 'en' ? `Sync complete: ${summary.checkins || 0} days` : `Sync สำเร็จ: ${summary.checkins || 0} วัน`);
       app.toast(app.language === 'en' ? 'Apple Health synced' : 'Sync Apple Health แล้ว');
+      app.render();
+      return;
     } catch (error) { setStatus(container, error.message, true); }
     event.currentTarget.disabled = false;
   });
