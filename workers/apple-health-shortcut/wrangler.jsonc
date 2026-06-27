@@ -1,20 +1,20 @@
 {
-	"name": "trail-runner-coach-apple-health-sync",
-	"main": "src/index.js",
-	"compatibility_date": "2026-06-25",
-	"vars": {
-		"APP_ORIGIN": "https://trail-runner-coachs.natthanaruk-s.workers.dev"
-	},
-	"secrets": {
-		"required": [
-			"APPLE_HEALTH_BRIDGE_TOKEN",
-			"APPLE_HEALTH_ENCRYPTION_KEY"
-		]
-	},
-	"kv_namespaces": [
-		{
-			"binding": "APPLE_HEALTH_DATA",
-			"id": "c1ff0b5139d4423181aecb9d006c7a54"
-		}
-	]
+  "name": "trail-runner-coach-apple-health-sync",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-25",
+  "vars": {
+    "APP_ORIGIN": "https://trail-runner-coachs.natthanaruk-s.workers.dev"
+  },
+  "secrets": {
+    "required": [
+      "APPLE_HEALTH_BRIDGE_TOKEN",
+      "APPLE_HEALTH_ENCRYPTION_KEY"
+    ]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "APPLE_HEALTH_DATA",
+      "id": "c1ff0b5139d4423181aecb9d006c7a54"
+    }
+  ]
 }
