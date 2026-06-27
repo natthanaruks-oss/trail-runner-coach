@@ -216,3 +216,10 @@
 - Added daily recovery/body metric pull through the existing Apple Health normalizer.
 - Preserved the existing Strava Worker, OAuth routes, tokens, KV namespaces and IndexedDB schema.
 - Removed the Apple Health bridge token from normal app backup exports.
+
+## 2.4.1 — Automatic Apple Health pull and diagnostics
+
+- Automatically pulls Apple Health Shortcut Worker data into the current browser when Today or Apple Health is opened and local data is missing/stale.
+- Adds a visible sync status outside Advanced Settings.
+- Adds “Check Worker data” to show whether the Worker contains daily records before importing.
+- Keeps Strava Worker, Apple Health Worker, OAuth, KV, Secrets, token format, adapters, sync manager and IndexedDB schema unchanged.

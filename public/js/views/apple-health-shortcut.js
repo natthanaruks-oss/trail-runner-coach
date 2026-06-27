@@ -1,6 +1,7 @@
 import {
   appleHealthConnectionMode,
   buildAppleShortcutRunUrl,
+  fetchAppleHealthShortcutPayload,
   fetchAppleHealthShortcutStatus,
   getAppleHealthShortcutConfig,
   isAppleHealthShortcutConfigured,
@@ -8,6 +9,7 @@ import {
   parseAppleHealthShortcutSetupReceipt
 } from '../adapters/apple-health.js';
 import { syncProviderNow, updateAppleHealthConnectionSnapshot } from '../adapters/sync-manager.js';
+import { autoPullAppleHealth, latestAppleHealthProviderState, shouldAutoPullAppleHealth } from '../core/apple-health-auto-pull.js';
 import { escapeHtml, formatNumber, pageHeader } from './components.js';
 import { selectAppleHealthInsights } from '../core/health-insights.js';
 import { selectToday } from '../core/selectors.js';
@@ -21,6 +23,7 @@ export function renderAppleHealthShortcut(container, state, app) {
   const tokenMask = config.accessToken ? `${config.accessToken.slice(0, 5)}••••••••${config.accessToken.slice(-4)}` : '—';
   const health = selectAppleHealthInsights(state);
   const today = selectToday(state);
+  const providerState = latestAppleHealthProviderState(state);
 
   container.innerHTML = `
     ${pageHeader(
@@ -37,9 +40,11 @@ export function renderAppleHealthShortcut(container, state, app) {
       </div>
       <div class="connection-overview-actions">
         <button class="button primary" type="button" data-apple-shortcut-sync ${configured || mode === 'native' ? '' : 'disabled'}>${en ? 'Pull latest data' : 'ดึงข้อมูลล่าสุด'}</button>
+        <button class="button secondary" type="button" data-apple-shortcut-diagnose ${configured ? '' : 'disabled'}>${en ? 'Check Worker data' : 'ตรวจข้อมูลบน Worker'}</button>
         <a class="button secondary" href="${escapeHtml(buildAppleShortcutRunUrl(state.settings))}" ${configured ? '' : 'aria-disabled="true"'}>${en ? 'Run shortcut' : 'เปิด Shortcut'}</a>
       </div>
     </section>
+    <div class="wizard-status submetric ${providerState.status === 'error' || providerState.status === 'auth_error' ? 'error' : health.hasData ? 'success' : ''}" id="apple-live-sync-status">${liveSyncStatus(health, providerState, en)}</div>
 
     ${renderHealthData(health, today, en)}
 
@@ -115,7 +120,7 @@ export function renderAppleHealthShortcut(container, state, app) {
 
     <section class="section callout"><strong>${en ? 'Data ownership rule' : 'กติกาแหล่งข้อมูล'}:</strong> ${en ? 'Do not add workout actions to the Shortcut while Strava is connected. This avoids duplicate activities.' : 'ระหว่างที่ Strava เชื่อมอยู่ ไม่ต้องใส่ Workout ใน Shortcut เพื่อลดกิจกรรมซ้ำ'}</section>`;
 
-  bindActions(container, app);
+  bindActions(container, app, state, health);
 }
 
 function renderHealthData(health, today, en) {
@@ -175,7 +180,7 @@ function formatTimestamp(value, en) {
   return date.toLocaleString(en ? 'en-GB' : 'th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
 }
 
-function bindActions(container, app) {
+function bindActions(container, app, state, health) {
   container.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
     await navigator.clipboard.writeText(button.dataset.copy || '');
     app.toast(app.language === 'en' ? 'Copied' : 'คัดลอกแล้ว');
@@ -216,17 +221,42 @@ function bindActions(container, app) {
   container.querySelector('[data-apple-shortcut-test]')?.addEventListener('click', () => testConfig(container, app).catch(error => setStatus(container, error.message, true)));
   container.querySelector('[data-apple-shortcut-sync]')?.addEventListener('click', async event => {
     event.currentTarget.disabled = true;
+    setLiveStatus(container, app.language === 'en' ? 'Pulling Apple Health data into this browser…' : 'กำลังดึงข้อมูล Apple Health เข้า Browser นี้…');
     setStatus(container, app.language === 'en' ? 'Pulling Apple Health data…' : 'กำลังดึงข้อมูล Apple Health…');
     try {
       const result = await syncProviderNow(app.store, 'apple_health', { days: 90, trigger: 'shortcut_manual', resetRetry: true });
       const summary = result.result || {};
       setStatus(container, app.language === 'en' ? `Sync complete: ${summary.checkins || 0} days` : `Sync สำเร็จ: ${summary.checkins || 0} วัน`);
+      setLiveStatus(container, app.language === 'en' ? `Imported ${summary.checkins || 0} day(s) into this browser.` : `นำเข้าข้อมูลเข้า Browser นี้แล้ว ${summary.checkins || 0} วัน`);
       app.toast(app.language === 'en' ? 'Apple Health synced' : 'Sync Apple Health แล้ว');
       app.render();
       return;
-    } catch (error) { setStatus(container, error.message, true); }
+    } catch (error) {
+      setStatus(container, error.message, true);
+      setLiveStatus(container, error.message, true);
+    }
     event.currentTarget.disabled = false;
   });
+
+  container.querySelector('[data-apple-shortcut-diagnose]')?.addEventListener('click', async event => {
+    event.currentTarget.disabled = true;
+    setLiveStatus(container, app.language === 'en' ? 'Checking encrypted data stored on the Worker…' : 'กำลังตรวจข้อมูลเข้ารหัสที่เก็บบน Worker…');
+    try {
+      const payload = await fetchAppleHealthShortcutPayload(app.store.getState().settings, { days: 90 });
+      const rows = Array.isArray(payload.dailyMetrics) ? payload.dailyMetrics : [];
+      const latest = rows.at(-1)?.date || '—';
+      const message = app.language === 'en'
+        ? `Worker has ${rows.length} daily record(s). Latest date: ${latest}.`
+        : `Worker มีข้อมูลรายวัน ${rows.length} วัน · วันที่ล่าสุด ${latest}`;
+      setLiveStatus(container, message, rows.length === 0);
+    } catch (error) {
+      setLiveStatus(container, error.message, true);
+    } finally {
+      event.currentTarget.disabled = false;
+    }
+  });
+
+  scheduleAppleHealthPageAutoPull(container, state, app, health);
 }
 
 async function saveConfig(app, config) {
@@ -240,6 +270,56 @@ async function testConfig(container, app) {
   if (!status.ready) throw new Error('Apple Health Shortcut Worker ยังตั้งค่าไม่ครบ');
   setStatus(container, app.language === 'en' ? 'Bridge is ready' : 'Bridge พร้อมใช้งาน');
   app.toast(app.language === 'en' ? 'Bridge ready' : 'Bridge พร้อม');
+}
+
+
+function liveSyncStatus(health, providerState, en) {
+  if (providerState?.lastError) return providerState.lastError;
+  if (health.hasData) {
+    return en
+      ? `This browser has Apple Health data. Last import ${formatTimestamp(health.lastImportedAt, en)}.`
+      : `Browser นี้มีข้อมูล Apple Health แล้ว · นำเข้าล่าสุด ${formatTimestamp(health.lastImportedAt, en)}`;
+  }
+  return en
+    ? 'The Shortcut uploads to the Worker first. This page now pulls that data into the current browser automatically.'
+    : 'Shortcut จะส่งข้อมูลขึ้น Worker ก่อน หน้านี้จะดึงข้อมูลเข้า Browser ปัจจุบันให้อัตโนมัติ';
+}
+
+function setLiveStatus(container, message, error = false) {
+  const element = container.querySelector('#apple-live-sync-status');
+  if (!element) return;
+  element.textContent = message;
+  element.classList.toggle('error', error);
+  element.classList.toggle('success', !error);
+}
+
+function scheduleAppleHealthPageAutoPull(container, state, app, health) {
+  if (!shouldAutoPullAppleHealth(state, health)) return;
+  const button = container.querySelector('[data-apple-shortcut-sync]');
+  if (button) {
+    button.disabled = true;
+    button.textContent = app.language === 'en' ? 'Pulling…' : 'กำลังดึง…';
+  }
+  setLiveStatus(container, app.language === 'en' ? 'Automatically pulling the latest Worker data…' : 'กำลังดึงข้อมูลล่าสุดจาก Worker อัตโนมัติ…');
+  queueMicrotask(async () => {
+    try {
+      const result = await autoPullAppleHealth(app, { days: 90, trigger: 'apple_health_page_auto' });
+      const count = Number(result?.result?.checkins || 0);
+      if (count > 0) {
+        app.toast(app.language === 'en' ? `Apple Health imported: ${count} day(s)` : `นำเข้า Apple Health แล้ว ${count} วัน`);
+        app.render();
+        return;
+      }
+      setLiveStatus(container, app.language === 'en' ? 'Worker responded but contains no supported daily data.' : 'Worker ตอบกลับแล้ว แต่ยังไม่มี Daily Metric ที่รองรับ', true);
+    } catch (error) {
+      setLiveStatus(container, error.message, true);
+    } finally {
+      if (button?.isConnected) {
+        button.disabled = false;
+        button.textContent = app.language === 'en' ? 'Pull latest data' : 'ดึงข้อมูลล่าสุด';
+      }
+    }
+  });
 }
 
 function setStatus(container, message, error = false) {

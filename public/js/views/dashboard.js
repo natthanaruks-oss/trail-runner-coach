@@ -8,6 +8,7 @@ import { foodTotals, nutritionTarget, dailyWaterTargetMl } from '../core/nutriti
 import { STORES } from '../core/constants.js';
 import { nowIso } from '../core/date.js';
 import { syncProviderNow } from '../adapters/sync-manager.js';
+import { autoPullAppleHealth, latestAppleHealthProviderState, shouldAutoPullAppleHealth } from '../core/apple-health-auto-pull.js';
 
 export function renderDashboard(container, state, app) {
   const today = selectToday(state);
@@ -128,16 +129,22 @@ export function renderDashboard(container, state, app) {
     const button = event.currentTarget;
     button.disabled = true;
     button.textContent = en ? 'Pulling…' : 'กำลังดึง…';
+    setDashboardAppleStatus(container, en ? 'Pulling the latest Apple Health data…' : 'กำลังดึงข้อมูล Apple Health ล่าสุด…');
     try {
-      await syncProviderNow(app.store, 'apple_health', { days: 30, trigger: 'dashboard_manual', resetRetry: true });
-      app.toast(en ? 'Apple Health updated' : 'อัปเดต Apple Health แล้ว');
+      const result = await syncProviderNow(app.store, 'apple_health', { days: 90, trigger: 'dashboard_manual', resetRetry: true });
+      const count = Number(result?.result?.checkins || 0);
+      app.toast(en ? `Apple Health updated: ${count} day(s)` : `อัปเดต Apple Health แล้ว ${count} วัน`);
       app.render();
     } catch (error) {
-      app.toast(error.message || (en ? 'Apple Health sync failed' : 'ดึง Apple Health ไม่สำเร็จ'));
+      const message = error.message || (en ? 'Apple Health sync failed' : 'ดึง Apple Health ไม่สำเร็จ');
+      setDashboardAppleStatus(container, message, true);
+      app.toast(message);
       button.disabled = false;
       button.textContent = en ? 'Pull latest' : 'ดึงข้อมูลล่าสุด';
     }
   });
+
+  scheduleDashboardAppleAutoPull(container, state, app, health, en);
 }
 
 function renderAppleHealthSummary(health, today, en) {
@@ -168,6 +175,7 @@ function renderAppleHealthSummary(health, today, en) {
         <div><span class="status ${health.hasData ? 'green' : 'yellow'}">${health.hasData ? (en ? 'Data received' : 'รับข้อมูลแล้ว') : (en ? 'Waiting for shortcut' : 'รอข้อมูลจาก Shortcut')}</span><small>${escapeHtml(sourceText)}</small></div>
         <div class="button-row"><button class="button secondary compact" type="button" data-dashboard-apple-sync>${en ? 'Pull latest' : 'ดึงข้อมูลล่าสุด'}</button><a class="button ghost compact" href="#/apple-health-shortcut">${en ? 'Manage' : 'จัดการ'}</a></div>
       </div>
+      <div class="wizard-status submetric ${health.hasData ? 'success' : ''}" data-dashboard-apple-status>${dashboardAppleStatusText(health, en)}</div>
       <div class="health-metric-grid">
         ${metricDefinitions.map(([key, label, unit, usedBy]) => healthMetricCard(label, health.metrics[key], unit, usedBy, en)).join('')}
       </div>
@@ -228,6 +236,57 @@ function signedKcal(value) {
 function scoreRing({ label, value, max, normalized, color, sub }) {
   const display = value == null ? '—' : formatNumber(value, max === 21 ? 1 : 0);
   return `<article class="score-ring-card card flat"><div class="ring small" style="--value:${Math.max(0, normalized || 0)};--ring-color:${color}"><div class="ring-content"><strong>${display}</strong><small>/${max}</small></div></div><div class="score-ring-text"><strong>${label}</strong><span>${escapeHtml(sub)}</span></div></article>`;
+}
+
+
+function dashboardAppleStatusText(health, en) {
+  if (health.hasData) {
+    return en
+      ? `Local app has ${health.trend.coverageDays} Apple Health day(s). Latest ${health.dateKey}.`
+      : `แอปมีข้อมูล Apple Health ${health.trend.coverageDays} วัน · ล่าสุด ${health.dateKey}`;
+  }
+  return en
+    ? 'The shortcut can store data in the Worker, but this browser must pull it into the app.'
+    : 'Shortcut เก็บข้อมูลไว้ที่ Worker แล้ว แต่ Browser นี้ต้องดึงข้อมูลเข้ามาในแอป';
+}
+
+function setDashboardAppleStatus(container, message, error = false) {
+  const element = container.querySelector('[data-dashboard-apple-status]');
+  if (!element) return;
+  element.textContent = message;
+  element.classList.toggle('error', error);
+  element.classList.toggle('success', !error);
+}
+
+function scheduleDashboardAppleAutoPull(container, state, app, health, en) {
+  if (!shouldAutoPullAppleHealth(state, health)) return;
+  const provider = latestAppleHealthProviderState(state);
+  const button = container.querySelector('[data-dashboard-apple-sync]');
+  if (button) {
+    button.disabled = true;
+    button.textContent = en ? 'Pulling…' : 'กำลังดึง…';
+  }
+  setDashboardAppleStatus(container, en ? 'Automatically checking the Apple Health bridge…' : 'กำลังตรวจและดึงข้อมูล Apple Health อัตโนมัติ…');
+  queueMicrotask(async () => {
+    try {
+      const result = await autoPullAppleHealth(app, { days: 90, trigger: 'dashboard_auto' });
+      const count = Number(result?.result?.checkins || 0);
+      if (count > 0) {
+        app.toast(en ? `Apple Health imported: ${count} day(s)` : `นำเข้า Apple Health แล้ว ${count} วัน`);
+        app.render();
+        return;
+      }
+      setDashboardAppleStatus(container, en ? 'The bridge responded, but it contains no supported daily data.' : 'Worker ตอบกลับแล้ว แต่ยังไม่มี Daily Metric ที่รองรับ', true);
+    } catch (error) {
+      const message = error?.message || provider?.lastError || (en ? 'Automatic Apple Health pull failed' : 'ดึง Apple Health อัตโนมัติไม่สำเร็จ');
+      setDashboardAppleStatus(container, message, true);
+    } finally {
+      if (button?.isConnected) {
+        button.disabled = false;
+        button.textContent = en ? 'Pull latest' : 'ดึงข้อมูลล่าสุด';
+      }
+    }
+  });
 }
 
 function renderPainAlert(today) {
