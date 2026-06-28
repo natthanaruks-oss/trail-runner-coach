@@ -10,7 +10,11 @@ const DISPLAY_KEYS = Object.freeze([
 
 export function selectAppleHealthInsights(state, dateKey = localDateKey(), days = 7) {
   const checkin = state.checkins.find(item => item.date === dateKey) || null;
-  const appleCheckin = hasAppleHealthSource(checkin) ? checkin : null;
+  const todayAppleCheckin = hasAppleHealthSource(checkin) ? checkin : null;
+  const latestAppleCheckin = [...(state.checkins || [])]
+    .filter(item => item.date <= dateKey && hasAppleHealthSource(item))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0] || null;
+  const appleCheckin = todayAppleCheckin || latestAppleCheckin;
   const rows = dateRange(dateKey, Math.max(1, Math.min(30, Number(days) || 7))).map(date => {
     const item = state.checkins.find(record => record.date === date && hasAppleHealthSource(record)) || null;
     return {
@@ -39,6 +43,8 @@ export function selectAppleHealthInsights(state, dateKey = localDateKey(), days 
 
   return {
     dateKey,
+    metricDate: appleCheckin?.date || null,
+    isCurrentDay: appleCheckin?.date === dateKey,
     checkin: appleCheckin,
     hasData: availableKeys.length > 0,
     partial: availableKeys.length > 0 && availableKeys.length < DISPLAY_KEYS.length,
@@ -67,7 +73,7 @@ export function hasAppleHealthSource(record) {
   if (!record) return false;
   if (record.source === 'apple_health') return true;
   if (Array.isArray(record.sources) && record.sources.includes('apple_health')) return true;
-  return record.wearable?.transport === 'shortcuts_bridge' || record.wearable?.transport === 'healthkit';
+  return ['shortcuts_bridge', 'health_auto_export', 'healthkit'].includes(record.wearable?.transport);
 }
 
 function latestAppleHealthSyncMeta(metadata) {

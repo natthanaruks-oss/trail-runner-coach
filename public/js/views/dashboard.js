@@ -164,12 +164,17 @@ function renderAppleHealthSummary(health, today, en) {
   const recovery = today.recovery;
   const energy = health.nutrition;
   const balance = energy.balance;
-  const sourceText = health.wearable?.transport === 'shortcuts_bridge'
-    ? 'Apple Shortcuts'
-    : health.wearable?.transport === 'healthkit' ? 'HealthKit' : 'Apple Health';
+  const sourceText = health.wearable?.transport === 'health_auto_export'
+    ? 'Health Auto Export'
+    : health.wearable?.transport === 'shortcuts_bridge'
+      ? 'Apple Shortcuts'
+      : health.wearable?.transport === 'healthkit' ? 'HealthKit' : 'Apple Health';
+  const healthHeading = health.isCurrentDay
+    ? (en ? 'Apple Health today' : 'Apple Health วันนี้')
+    : (en ? 'Latest Apple Health' : 'Apple Health ล่าสุด');
 
   return `<section class="section health-summary-section">
-    <div class="section-head"><h2>${en ? 'Apple Health today' : 'Apple Health วันนี้'}</h2><span>${escapeHtml(syncText)}</span></div>
+    <div class="section-head"><h2>${healthHeading}</h2><span>${escapeHtml(syncText)}</span></div>
     <article class="card flat health-summary-card ${health.hasData ? 'has-data' : ''}">
       <div class="health-summary-toolbar">
         <div><span class="status ${health.hasData ? 'green' : 'yellow'}">${health.hasData ? (en ? 'Data received' : 'รับข้อมูลแล้ว') : (en ? 'Waiting for shortcut' : 'รอข้อมูลจาก Shortcut')}</span><small>${escapeHtml(sourceText)}</small></div>
@@ -242,8 +247,8 @@ function scoreRing({ label, value, max, normalized, color, sub }) {
 function dashboardAppleStatusText(health, en) {
   if (health.hasData) {
     return en
-      ? `Local app has ${health.trend.coverageDays} Apple Health day(s). Latest ${health.dateKey}.`
-      : `แอปมีข้อมูล Apple Health ${health.trend.coverageDays} วัน · ล่าสุด ${health.dateKey}`;
+      ? `Local app has ${health.trend.coverageDays} Apple Health day(s). Showing ${health.metricDate || health.dateKey}.`
+      : `แอปมีข้อมูล Apple Health ${health.trend.coverageDays} วัน · แสดงข้อมูลวันที่ ${health.metricDate || health.dateKey}`;
   }
   return en
     ? 'The shortcut can store data in the Worker, but this browser must pull it into the app.'

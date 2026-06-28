@@ -64,3 +64,16 @@ test('Apple Active Energy is combined with BMR without double-counting the activ
   assert.equal(balance.totalOutKcal, 2300);
   assert.equal(balance.netKcal, -200);
 });
+
+
+test('Apple Health insights fall back to the latest available day when today has no completed export', () => {
+  const state = baseState();
+  state.checkins[0].source = 'hybrid';
+  state.checkins[0].sources = ['manual'];
+  state.checkins[0].wearable.transport = 'health_auto_export';
+  const insights = selectAppleHealthInsights(state, '2026-06-28', 7);
+  assert.equal(insights.hasData, true);
+  assert.equal(insights.metricDate, '2026-06-27');
+  assert.equal(insights.isCurrentDay, false);
+  assert.equal(insights.metrics.steps, 8240);
+});

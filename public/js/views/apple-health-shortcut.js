@@ -127,7 +127,7 @@ function renderHealthData(health, today, en) {
   const behavior = today.strain.behaviorLoad;
   const energy = health.nutrition;
   return `<section class="section">
-    <div class="section-head"><h2>${en ? 'Latest Apple Health data' : 'ข้อมูล Apple Health ล่าสุด'}</h2><span>${en ? 'Last sync' : 'Sync ล่าสุด'} ${escapeHtml(lastSync)}</span></div>
+    <div class="section-head"><h2>${en ? 'Latest Apple Health data' : 'ข้อมูล Apple Health ล่าสุด'}</h2><span>${health.metricDate ? `${en ? 'Data date' : 'ข้อมูลวันที่'} ${escapeHtml(health.metricDate)} · ` : ''}${en ? 'Last sync' : 'Sync ล่าสุด'} ${escapeHtml(lastSync)}</span></div>
     ${health.hasData ? `<article class="card flat">
       <div class="health-metric-grid">
         ${metrics.map(([key,label,unit,usage]) => healthValue(label, health.metrics[key], unit, usage, en)).join('')}

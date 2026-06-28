@@ -82,11 +82,11 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '2.5.0') throw new Error(`Expected package version 2.5.0, received ${packageJson.version}`);
+if (packageJson.version !== '2.5.1') throw new Error(`Expected package version 2.5.1, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v2.5.0')) throw new Error('Service-worker cache version was not bumped to 2.5.0');
+if (!serviceWorker.includes('trail-runner-coach-v2.5.1')) throw new Error('Service-worker cache version was not bumped to 2.5.1');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '2.5.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '2.5.1'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const dedupEngine = await readFile(resolve(root, 'public/js/core/activity-dedup.js'), 'utf8');
 if (!dedupEngine.includes('scoreActivityMatch') || !dedupEngine.includes('externalRefs')) throw new Error('Activity deduplication engine is incomplete');
 const activityImport = await readFile(resolve(root, 'public/js/adapters/activity-import.js'), 'utf8');
@@ -105,7 +105,7 @@ if (!progressView.includes('data-progress-preset') || !progressView.includes('sc
 const healthInsights = await readFile(resolve(root, 'public/js/core/health-insights.js'), 'utf8');
 if (!healthInsights.includes('selectAppleHealthInsights') || !healthInsights.includes('usesAppleActiveEnergy')) throw new Error('Apple Health insight selector is incomplete');
 const dashboardView = await readFile(resolve(root, 'public/js/views/dashboard.js'), 'utf8');
-if (!dashboardView.includes('Apple Health today') || !dashboardView.includes('data-dashboard-apple-sync')) throw new Error('Apple Health dashboard visibility is incomplete');
+if (!dashboardView.includes('Latest Apple Health') || !dashboardView.includes('data-dashboard-apple-sync')) throw new Error('Apple Health dashboard visibility is incomplete');
 const appleAutoPull = await readFile(resolve(root, 'public/js/core/apple-health-auto-pull.js'), 'utf8');
 if (!appleAutoPull.includes('shouldAutoPullAppleHealth') || !appleAutoPull.includes('autoPullAppleHealth')) throw new Error('Apple Health automatic pull is incomplete');
 
