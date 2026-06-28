@@ -3,16 +3,17 @@ import { getSyncState, runAutoSync } from '../adapters/sync-manager.js';
 import { reconcilePlanWorkouts } from './plan-reconciliation.js';
 
 const METRIC_RULES = Object.freeze({
-  sleepHours: { label: 'Sleep', unit: 'h', freshDays: 1, usableDays: 1 },
-  restingHr: { label: 'Resting HR', unit: 'bpm', freshDays: 1, usableDays: 2 },
-  hrvMs: { label: 'HRV', unit: 'ms', freshDays: 1, usableDays: 2 },
-  steps: { label: 'Steps', unit: '', freshDays: 0, usableDays: 1 },
-  activeEnergyKcal: { label: 'Active energy', unit: 'kcal', freshDays: 0, usableDays: 1 },
-  exerciseMinutes: { label: 'Exercise', unit: 'min', freshDays: 0, usableDays: 1 },
-  walkingRunningDistanceKm: { label: 'Daily distance', unit: 'km', freshDays: 0, usableDays: 1 }
+  sleepHours: { label: 'Sleep', unit: 'h', freshDays: 0, usableDays: 1, period: 'overnight' },
+  restingHr: { label: 'Resting HR', unit: 'bpm', freshDays: 0, usableDays: 1, period: 'overnight' },
+  hrvMs: { label: 'HRV', unit: 'ms', freshDays: 0, usableDays: 1, period: 'overnight' },
+  steps: { label: 'Steps', unit: '', freshDays: 0, usableDays: 0, period: 'current_day' },
+  activeEnergyKcal: { label: 'Active energy', unit: 'kcal', freshDays: 0, usableDays: 0, period: 'current_day' },
+  exerciseMinutes: { label: 'Exercise', unit: 'min', freshDays: 0, usableDays: 0, period: 'current_day' },
+  walkingRunningDistanceKm: { label: 'Daily distance', unit: 'km', freshDays: 0, usableDays: 0, period: 'current_day' }
 });
 
 const OBJECTIVE_KEYS = Object.freeze(Object.keys(METRIC_RULES));
+const OVERNIGHT_RECOVERY_KEYS = Object.freeze(['sleepHours', 'restingHr', 'hrvMs']);
 const SUBJECTIVE_KEYS = Object.freeze([
   'sleepQuality', 'fatigue', 'stress', 'muscleSoreness', 'pain',
   'painWithWalking', 'alteredGait', 'swelling', 'illnessSymptoms',
@@ -27,46 +28,80 @@ function sourceList(record) {
   return [...new Set([...(record?.sources || []), record?.source].filter(Boolean).filter(value => value !== 'hybrid'))];
 }
 
-export function selectLatestReadinessMetric(checkins = [], key, dateKey = localDateKey()) {
+function isHealthAutoExportRecord(record) {
+  const transport = String(record?.wearable?.transport || record?.transport || '').toLowerCase();
+  const bundle = String(record?.wearable?.sourceBundle || record?.sourceBundle || '').toLowerCase();
+  return transport === 'health_auto_export' || bundle.includes('healthautoexport');
+}
+
+function isOvernightRecoveryKey(key) {
+  return OVERNIGHT_RECOVERY_KEYS.includes(key);
+}
+
+export function resolveReadinessMetricDate(record, key, sourceDate = record?.date) {
+  if (!sourceDate) return { sourceDate: null, effectiveDate: null, alignment: 'unknown' };
+  if (isOvernightRecoveryKey(key) && isHealthAutoExportRecord(record)) {
+    return {
+      sourceDate,
+      effectiveDate: addDays(sourceDate, 1),
+      alignment: 'overnight_to_wake_day'
+    };
+  }
+  return {
+    sourceDate,
+    effectiveDate: sourceDate,
+    alignment: isOvernightRecoveryKey(key) ? 'same_day_recovery' : 'calendar_day'
+  };
+}
+
+function metricFromRecord(record, key, dateKey) {
   const rule = METRIC_RULES[key];
-  if (!rule) return null;
-  const rows = checkins
-    .filter(item => item?.date && item.date <= dateKey && finite(item[key]))
-    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  const row = rows[0];
-  if (!row) return null;
-  const ageDays = Math.max(0, daysBetween(row.date, dateKey));
+  if (!rule || !finite(record?.[key])) return null;
+  const sourceDate = record?.autoMetricDates?.[key] || record?.date || null;
+  const storedEffectiveDate = record?.autoMetricEffectiveDates?.[key] || null;
+  const resolved = storedEffectiveDate
+    ? {
+        sourceDate,
+        effectiveDate: storedEffectiveDate,
+        alignment: record?.autoMetricAlignments?.[key] || (isOvernightRecoveryKey(key) ? 'overnight_to_wake_day' : 'calendar_day')
+      }
+    : resolveReadinessMetricDate(record, key, sourceDate);
+  if (!resolved.effectiveDate || resolved.effectiveDate > dateKey) return null;
+  const ageDays = Math.max(0, daysBetween(resolved.effectiveDate, dateKey));
   if (ageDays > rule.usableDays) return null;
   return {
     key,
     label: rule.label,
     unit: rule.unit,
-    value: Number(row[key]),
-    date: row.date,
+    value: Number(record[key]),
+    date: resolved.sourceDate,
+    sourceDate: resolved.sourceDate,
+    effectiveDate: resolved.effectiveDate,
+    readinessDate: resolved.effectiveDate,
     ageDays,
     freshness: ageDays <= rule.freshDays ? 'fresh' : 'usable',
-    sources: sourceList(row)
+    alignment: resolved.alignment,
+    period: rule.period,
+    sources: sourceList(record)
   };
+}
+
+export function selectLatestReadinessMetric(checkins = [], key, dateKey = localDateKey()) {
+  const candidates = checkins
+    .map(record => metricFromRecord(record, key, dateKey))
+    .filter(Boolean)
+    .sort((a, b) => {
+      const effective = String(b.effectiveDate).localeCompare(String(a.effectiveDate));
+      if (effective) return effective;
+      return String(b.sourceDate).localeCompare(String(a.sourceDate));
+    });
+  return candidates[0] || null;
 }
 
 export function buildAutoReadinessContext({ checkins = [], dateKey = localDateKey(), existing = null } = {}) {
   const metricEntries = OBJECTIVE_KEYS.map(key => {
-    if (finite(existing?.[key])) {
-      const date = existing.autoMetricDates?.[key] || existing.date || dateKey;
-      const ageDays = Math.max(0, daysBetween(date, dateKey));
-      const rule = METRIC_RULES[key];
-      return {
-        key,
-        label: rule.label,
-        unit: rule.unit,
-        value: Number(existing[key]),
-        date,
-        ageDays,
-        freshness: ageDays <= rule.freshDays ? 'fresh' : ageDays <= rule.usableDays ? 'usable' : 'stale',
-        sources: sourceList(existing)
-      };
-    }
-    return selectLatestReadinessMetric(checkins, key, dateKey);
+    const existingMetric = finite(existing?.[key]) ? metricFromRecord(existing, key, dateKey) : null;
+    return existingMetric || selectLatestReadinessMetric(checkins, key, dateKey);
   }).filter(Boolean);
 
   const metrics = Object.fromEntries(metricEntries.map(item => [item.key, item]));
@@ -76,18 +111,23 @@ export function buildAutoReadinessContext({ checkins = [], dateKey = localDateKe
   const confidence = Math.round(Math.max(0, Math.min(100,
     objectiveCoverage * 70 + (freshCount / Math.max(1, metricEntries.length)) * 30 - staleCount * 8
   )));
-  const lastMetricDate = metricEntries.map(item => item.date).sort().at(-1) || null;
+  const lastMetricDate = metricEntries.map(item => item.effectiveDate).sort().at(-1) || null;
+  const lastSourceMetricDate = metricEntries.map(item => item.sourceDate).sort().at(-1) || null;
 
   return {
     dateKey,
     metrics,
     metricEntries,
-    autoMetricDates: Object.fromEntries(metricEntries.map(item => [item.key, item.date])),
+    autoMetricDates: Object.fromEntries(metricEntries.map(item => [item.key, item.sourceDate])),
+    autoMetricEffectiveDates: Object.fromEntries(metricEntries.map(item => [item.key, item.effectiveDate])),
+    autoMetricAlignments: Object.fromEntries(metricEntries.map(item => [item.key, item.alignment])),
     values: Object.fromEntries(metricEntries.map(item => [item.key, item.value])),
     sources: [...new Set(metricEntries.flatMap(item => item.sources || []))],
     objectiveCoveragePct: Math.round(objectiveCoverage * 100),
     confidence,
     lastMetricDate,
+    lastSourceMetricDate,
+    recoveryDatePolicy: 'wake_day_v1',
     hasObjectiveData: metricEntries.length > 0,
     missingKeys: OBJECTIVE_KEYS.filter(key => !metrics[key])
   };
@@ -100,11 +140,15 @@ export function buildReadinessDraft({ existing = null, checkins = [], dateKey = 
     date: dateKey,
     ...context.values,
     autoMetricDates: context.autoMetricDates,
+    autoMetricEffectiveDates: context.autoMetricEffectiveDates,
+    autoMetricAlignments: context.autoMetricAlignments,
     autoReadiness: {
       coveragePct: context.objectiveCoveragePct,
       confidence: context.confidence,
       generatedAt: new Date().toISOString(),
-      latestMetricDate: context.lastMetricDate
+      latestMetricDate: context.lastMetricDate,
+      latestSourceMetricDate: context.lastSourceMetricDate,
+      recoveryDatePolicy: context.recoveryDatePolicy
     }
   };
   for (const key of SUBJECTIVE_KEYS) {
@@ -133,9 +177,16 @@ export async function syncReadinessAndPlan(appStore, { force = true, reason = 'r
 
 export function readinessFreshnessLabel(metric, dateKey = localDateKey(), language = 'th') {
   if (!metric) return language === 'en' ? 'No data' : 'ไม่มีข้อมูล';
-  if (metric.date === dateKey) return language === 'en' ? 'Today' : 'วันนี้';
+  if (metric.alignment === 'overnight_to_wake_day' && metric.effectiveDate === dateKey) {
+    return language === 'en' ? 'Last night · used for today' : 'เมื่อคืน · ใช้กับวันนี้ทั้งวัน';
+  }
+  if (metric.period === 'overnight' && metric.effectiveDate === dateKey) {
+    return language === 'en' ? 'This morning' : 'เช้านี้';
+  }
+  if (metric.effectiveDate === dateKey) return language === 'en' ? 'Today' : 'วันนี้';
+  if (metric.ageDays === 1 && metric.period === 'overnight') return language === 'en' ? 'Latest usable recovery night' : 'คืนล่าสุดที่ใช้ได้';
   if (metric.ageDays === 1) return language === 'en' ? 'Latest: yesterday' : 'ล่าสุด: เมื่อวาน';
-  return language === 'en' ? `Latest: ${metric.date}` : `ล่าสุด ${metric.date}`;
+  return language === 'en' ? `Latest: ${metric.sourceDate || metric.date}` : `ล่าสุด ${metric.sourceDate || metric.date}`;
 }
 
-export { METRIC_RULES, OBJECTIVE_KEYS };
+export { METRIC_RULES, OBJECTIVE_KEYS, OVERNIGHT_RECOVERY_KEYS };

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.8.3 — Wake-day recovery alignment
+
+- Aligns Health Auto Export sleep, Resting HR and HRV to the following wake day for Daily Readiness.
+- Keeps last night's recovery attached to today for the full day, including after multiple workouts are synced.
+- Prevents yesterday's steps, active energy and daily distance from rolling into today.
+- Adds an automatic Today readiness preview even before a subjective check-in is saved.
+- Preserves provider source dates and stores effective readiness dates separately for traceability.
+- Does not change IndexedDB version, Cloudflare Workers, tokens, KV bindings or sync credentials.
+
 ## 2.8.2 — Multi-session plan reconciliation
 
 - Combine up to four compatible same-day activities into one planned workout.

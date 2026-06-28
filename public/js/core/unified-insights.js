@@ -72,9 +72,11 @@ export function buildMetricModels(health = {}) {
   return UNIFIED_HEALTH_METRICS.map(definition => {
     const value = finite(health?.metrics?.[definition.key]) ? Number(health.metrics[definition.key]) : null;
     const date = health?.metricDates?.[definition.key] || null;
+    const sourceDate = health?.sourceMetricDates?.[definition.key] || date;
+    const alignment = health?.metricAlignments?.[definition.key] || null;
     const series = rows.map(row => finite(row?.[definition.key]) ? Number(row[definition.key]) : null);
     const priorValues = rows
-      .filter(row => row?.date !== date && finite(row?.[definition.key]))
+      .filter(row => row?.date !== sourceDate && finite(row?.[definition.key]))
       .map(row => Number(row[definition.key]));
     const baseline = average(priorValues);
     const delta = value != null && baseline != null ? value - baseline : null;
@@ -82,6 +84,8 @@ export function buildMetricModels(health = {}) {
       ...definition,
       value,
       date,
+      sourceDate,
+      alignment,
       baseline: roundOrNull(baseline, definition.precision),
       delta: roundOrNull(delta, definition.precision),
       tone: metricTone(definition.key, delta),

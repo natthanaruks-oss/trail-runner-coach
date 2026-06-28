@@ -19,7 +19,7 @@ export function renderCheckin(container, state, app) {
   const en = app.language === 'en';
 
   container.innerHTML = `
-    ${pageHeader(en ? 'Daily Readiness Check' : 'Daily Readiness Check', en ? 'Synced recovery data plus a short human check-in' : 'ใช้ข้อมูลจากอุปกรณ์อัตโนมัติ แล้วตอบเฉพาะสิ่งที่อุปกรณ์วัดไม่ได้', en ? 'Data + body awareness' : 'ข้อมูล + ความรู้สึกจริง')}
+    ${pageHeader(en ? 'Daily Readiness Check' : 'Daily Readiness Check', en ? "Last night\'s recovery, today\'s activity and a short human check-in" : 'ใช้การนอนเมื่อคืนและค่าฟื้นตัวล่าสุดกับวันนี้ทั้งวัน แล้วตอบเฉพาะสิ่งที่อุปกรณ์วัดไม่ได้', en ? 'Wake-day recovery logic' : 'เมื่อคืน → ความพร้อมวันนี้')}
 
     <section class="card readiness-auto-card">
       <div class="section-head">
@@ -39,7 +39,7 @@ export function renderCheckin(container, state, app) {
       </div>
       <div class="callout ${context.hasObjectiveData ? '' : 'warning'}" data-readiness-sync-status>
         ${context.hasObjectiveData
-          ? (en ? 'These values are used automatically. You only need to report fatigue, soreness, stress and safety symptoms.' : 'ระบบนำข้อมูลเหล่านี้ไปคำนวณอัตโนมัติ คุณตอบเฉพาะความล้า อาการปวด ความเครียด และสัญญาณความปลอดภัย')
+          ? (en ? "Last night\'s sleep and morning recovery metrics stay attached to today for the full day. Current-day steps and energy update as you move." : 'การนอนเมื่อคืนและค่าฟื้นตัวช่วงเช้าจะใช้กับวันนี้ทั้งวัน ส่วนก้าวและพลังงานจะอัปเดตตามกิจกรรมของวันนี้')
           : (en ? 'Sync your devices first. The readiness score will remain conservative until objective recovery data is available.' : 'กด Sync ก่อน คะแนนจะคงความระมัดระวังจนกว่าจะมีข้อมูลการฟื้นตัวจากอุปกรณ์')}
       </div>
     </section>
@@ -179,11 +179,15 @@ function formToCheckin(data, draft, context) {
     unusualDizziness: data.has('unusualDizziness'),
     note: data.get('note') || '',
     autoMetricDates: context.autoMetricDates,
+    autoMetricEffectiveDates: context.autoMetricEffectiveDates,
+    autoMetricAlignments: context.autoMetricAlignments,
     autoReadiness: {
       coveragePct: context.objectiveCoveragePct,
       confidence: context.confidence,
       generatedAt: nowIso(),
-      latestMetricDate: context.lastMetricDate
+      latestMetricDate: context.lastMetricDate,
+      latestSourceMetricDate: context.lastSourceMetricDate,
+      recoveryDatePolicy: context.recoveryDatePolicy
     },
     createdAt: draft.createdAt || nowIso(),
     updatedAt: nowIso()

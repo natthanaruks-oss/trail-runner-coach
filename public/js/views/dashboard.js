@@ -247,7 +247,7 @@ function healthSnapshotMetric(metric, currentDate, en) {
   const formatted = formatHealthValue(metric, en);
   const delta = metricDeltaText(metric, en);
   return `<a class="health-snapshot-metric tone-${escapeHtml(metric.tone)}" href="#/health">
-    <div class="health-snapshot-head"><span>${escapeHtml(metricLabel(metric.key, en))}</span><i>${freshnessLabel(metric.date, currentDate, en)}</i></div>
+    <div class="health-snapshot-head"><span>${escapeHtml(metricLabel(metric.key, en))}</span><i>${freshnessLabel(metric, currentDate, en)}</i></div>
     <div class="health-snapshot-value">${formatted.value}<small>${formatted.unit}</small></div>
     <div class="health-snapshot-delta ${escapeHtml(metric.tone)}">${escapeHtml(delta)}</div>
     ${sparkline(metric.series, toneColor(metric.tone), 'metric-sparkline')}
@@ -342,8 +342,11 @@ function metricDeltaText(metric, en) {
   if (metric.key === 'activeEnergyKcal') return `${sign}${formatNumber(metric.delta)} kcal ${en ? 'vs avg' : 'เทียบค่าเฉลี่ย'}`;
   return `${sign}${formatNumber(metric.delta,2)} km ${en ? 'vs avg' : 'เทียบค่าเฉลี่ย'}`;
 }
-function freshnessLabel(metricDate, currentDate, en) {
+function freshnessLabel(metric, currentDate, en) {
+  const metricDate = metric?.date || null;
   if (!metricDate) return en ? 'No data' : 'ไม่มีข้อมูล';
+  if (metric?.alignment === 'overnight_to_wake_day' && metricDate === currentDate) return en ? 'Last night' : 'เมื่อคืน';
+  if (metric?.alignment === 'same_day_recovery' && metricDate === currentDate) return en ? 'This morning' : 'เช้านี้';
   if (metricDate === currentDate) return en ? 'Today' : 'วันนี้';
   const date = new Date(`${metricDate}T00:00:00`);
   if (Number.isNaN(date.getTime())) return metricDate;

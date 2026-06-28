@@ -4,15 +4,18 @@ import { buildCalibrationProfile } from '../engines/calibration.js';
 import { getPlanContext, plannedTotals } from './plan.js';
 import { getActiveRace, getActivePlan } from './races.js';
 import { addDays, dateRange, daysBetween, localDateKey } from './date.js';
+import { buildReadinessDraft } from './auto-readiness.js';
 
 export function selectToday(state, dateKey = localDateKey()) {
   const checkin = state.checkins.find(item => item.date === dateKey) || null;
+  const auto = buildReadinessDraft({ existing: checkin, checkins: state.checkins, dateKey });
+  const readinessCheckin = checkin || auto.context.hasObjectiveData ? auto.draft : null;
   // Today's feedback starts influencing tomorrow. This avoids tuning a score against itself.
   const calibration = buildCalibrationProfile(state, dateKey);
   const plan = getPlanContext(state, dateKey);
   const race = getActiveRace(state);
-  const readiness = checkin ? calculateReadiness({
-    checkin,
+  const readiness = readinessCheckin ? calculateReadiness({
+    checkin: readinessCheckin,
     checkinHistory: state.checkins,
     activities: state.activities,
     painLogs: state.painLogs,
@@ -21,18 +24,34 @@ export function selectToday(state, dateKey = localDateKey()) {
     dateKey
   }) : null;
   const load = dailyLoad(state.activities, dateKey);
-  const strain = calculateDailyStrain(state.activities, dateKey, checkin, state.checkins.filter(item => item.date < dateKey), calibration);
+  const strain = calculateDailyStrain(state.activities, dateKey, readinessCheckin, state.checkins.filter(item => item.date < dateKey), calibration);
   const loadTrend = calculateLoadTrend(state.activities, dateKey);
-  return { dateKey, checkin, plan, race, readiness, recovery: readiness?.recovery || null, strain, load, loadTrend, calibration };
+  return {
+    dateKey,
+    checkin,
+    readinessCheckin,
+    autoReadinessContext: auto.context,
+    plan,
+    race,
+    readiness,
+    recovery: readiness?.recovery || null,
+    strain,
+    load,
+    loadTrend,
+    calibration
+  };
 }
 
 export function selectScoreHistory(state, days = 14, endDateKey = localDateKey()) {
   return dateRange(endDateKey, days).map(dateKey => {
     const checkin = state.checkins.find(item => item.date === dateKey) || null;
+    const history = state.checkins.filter(item => item.date <= dateKey);
+    const auto = buildReadinessDraft({ existing: checkin, checkins: history, dateKey });
+    const readinessCheckin = checkin || auto.context.hasObjectiveData ? auto.draft : null;
     const calibration = buildCalibrationProfile(state, dateKey);
-    const readiness = checkin ? calculateReadiness({
-      checkin,
-      checkinHistory: state.checkins.filter(item => item.date <= dateKey),
+    const readiness = readinessCheckin ? calculateReadiness({
+      checkin: readinessCheckin,
+      checkinHistory: history,
       activities: state.activities.filter(item => item.date <= dateKey),
       painLogs: state.painLogs.filter(item => item.date <= dateKey),
       settings: state.settings,
@@ -42,7 +61,7 @@ export function selectScoreHistory(state, days = 14, endDateKey = localDateKey()
     const strain = calculateDailyStrain(
       state.activities.filter(item => item.date <= dateKey),
       dateKey,
-      checkin,
+      readinessCheckin,
       state.checkins.filter(item => item.date < dateKey),
       calibration
     );

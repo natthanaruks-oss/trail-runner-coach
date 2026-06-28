@@ -66,16 +66,20 @@ test('Apple Active Energy is combined with BMR without double-counting the activ
 });
 
 
-test('Apple Health insights fall back to the latest available day when today has no completed export', () => {
+test('Apple Health insights carry overnight recovery forward but not yesterday movement', () => {
   const state = baseState();
   state.checkins[0].source = 'hybrid';
   state.checkins[0].sources = ['manual'];
   state.checkins[0].wearable.transport = 'health_auto_export';
   const insights = selectAppleHealthInsights(state, '2026-06-28', 7);
   assert.equal(insights.hasData, true);
-  assert.equal(insights.metricDate, '2026-06-27');
-  assert.equal(insights.isCurrentDay, false);
-  assert.equal(insights.metrics.steps, 8240);
+  assert.equal(insights.metricDate, '2026-06-28');
+  assert.equal(insights.isCurrentDay, true);
+  assert.equal(insights.metrics.sleepHours, 7.4);
+  assert.equal(insights.metricDates.sleepHours, '2026-06-28');
+  assert.equal(insights.sourceMetricDates.sleepHours, '2026-06-27');
+  assert.equal(insights.metricAlignments.sleepHours, 'overnight_to_wake_day');
+  assert.equal(insights.metrics.steps, null);
 });
 
 test('Apple Health insights use the latest non-null value and date for each metric', () => {
@@ -111,12 +115,15 @@ test('Apple Health insights use the latest non-null value and date for each metr
   assert.equal(insights.metrics.steps, 352);
   assert.equal(insights.metricDates.steps, '2026-06-28');
   assert.equal(insights.metrics.sleepHours, 5.58);
-  assert.equal(insights.metricDates.sleepHours, '2026-06-27');
+  assert.equal(insights.metricDates.sleepHours, '2026-06-28');
+  assert.equal(insights.sourceMetricDates.sleepHours, '2026-06-27');
   assert.equal(insights.metrics.restingHr, 63);
-  assert.equal(insights.metricDates.restingHr, '2026-06-27');
+  assert.equal(insights.metricDates.restingHr, '2026-06-28');
+  assert.equal(insights.sourceMetricDates.restingHr, '2026-06-27');
   assert.equal(insights.metrics.hrvMs, 41);
-  assert.equal(insights.metricDates.hrvMs, '2026-06-27');
-  assert.equal(insights.hasMixedMetricDates, true);
+  assert.equal(insights.metricDates.hrvMs, '2026-06-28');
+  assert.equal(insights.sourceMetricDates.hrvMs, '2026-06-27');
+  assert.equal(insights.hasMixedMetricDates, false);
   assert.equal(insights.metricDate, '2026-06-28');
   assert.equal(insights.recoveryAvailable, 3);
 });
