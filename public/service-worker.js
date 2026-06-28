@@ -1,4 +1,4 @@
-const CACHE = 'trail-runner-coach-v2.8.3';
+const CACHE = 'trail-runner-coach-v2.8.4';
 const APP_SHELL = ['/', '/index.html', '/styles/app.css', '/js/app.js', '/manifest.webmanifest', '/assets/icon.svg'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));

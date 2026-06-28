@@ -1,4 +1,4 @@
-import { addDays, daysBetween, localDateKey } from './date.js';
+import { daysBetween, localDateKey } from './date.js';
 import { getSyncState, runAutoSync } from '../adapters/sync-manager.js';
 import { reconcilePlanWorkouts } from './plan-reconciliation.js';
 
@@ -43,7 +43,7 @@ export function resolveReadinessMetricDate(record, key, sourceDate = record?.dat
   if (isOvernightRecoveryKey(key) && isHealthAutoExportRecord(record)) {
     return {
       sourceDate,
-      effectiveDate: addDays(sourceDate, 1),
+      effectiveDate: sourceDate,
       alignment: 'overnight_to_wake_day'
     };
   }
@@ -59,10 +59,14 @@ function metricFromRecord(record, key, dateKey) {
   if (!rule || !finite(record?.[key])) return null;
   const sourceDate = record?.autoMetricDates?.[key] || record?.date || null;
   const storedEffectiveDate = record?.autoMetricEffectiveDates?.[key] || null;
-  const resolved = storedEffectiveDate
+  const legacyWakeDayDraft = record?.autoReadiness?.recoveryDatePolicy === 'wake_day_v1';
+  const usableStoredEffectiveDate = storedEffectiveDate
+    && !(isOvernightRecoveryKey(key)
+      && (isHealthAutoExportRecord(record) || legacyWakeDayDraft));
+  const resolved = usableStoredEffectiveDate
     ? {
         sourceDate,
-        effectiveDate: storedEffectiveDate,
+        effectiveDate: usableStoredEffectiveDate,
         alignment: record?.autoMetricAlignments?.[key] || (isOvernightRecoveryKey(key) ? 'overnight_to_wake_day' : 'calendar_day')
       }
     : resolveReadinessMetricDate(record, key, sourceDate);
@@ -100,7 +104,10 @@ export function selectLatestReadinessMetric(checkins = [], key, dateKey = localD
 
 export function buildAutoReadinessContext({ checkins = [], dateKey = localDateKey(), existing = null } = {}) {
   const metricEntries = OBJECTIVE_KEYS.map(key => {
-    const existingMetric = finite(existing?.[key]) ? metricFromRecord(existing, key, dateKey) : null;
+    const legacyWakeDayDraft = existing?.autoReadiness?.recoveryDatePolicy === 'wake_day_v1';
+    const canReuseExisting = finite(existing?.[key])
+      && !(legacyWakeDayDraft && isOvernightRecoveryKey(key));
+    const existingMetric = canReuseExisting ? metricFromRecord(existing, key, dateKey) : null;
     return existingMetric || selectLatestReadinessMetric(checkins, key, dateKey);
   }).filter(Boolean);
 
@@ -127,7 +134,7 @@ export function buildAutoReadinessContext({ checkins = [], dateKey = localDateKe
     confidence,
     lastMetricDate,
     lastSourceMetricDate,
-    recoveryDatePolicy: 'wake_day_v1',
+    recoveryDatePolicy: 'wake_day_v2',
     hasObjectiveData: metricEntries.length > 0,
     missingKeys: OBJECTIVE_KEYS.filter(key => !metrics[key])
   };

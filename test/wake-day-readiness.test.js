@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { selectToday } from '../public/js/core/selectors.js';
 
-test('Today computes an automatic readiness preview from last-night Health Auto Export data without requiring a saved check-in', () => {
+test('Today uses same-date Health Auto Export sleep because the feed date is the wake day', () => {
   const state = {
     settings: {
       athlete: { sleepTargetHours: 7.5, restingHrBaseline: 55 },
@@ -11,18 +11,12 @@ test('Today computes an automatic readiness preview from last-night Health Auto 
     },
     checkins: [
       {
-        date: '2026-06-27',
-        source: 'apple_health',
-        sources: ['apple_health'],
-        sleepHours: 6.4,
-        restingHr: 58,
-        hrvMs: 42,
-        wearable: { transport: 'health_auto_export', sourceBundle: 'com.healthyapps.healthautoexport' }
-      },
-      {
         date: '2026-06-28',
         source: 'apple_health',
         sources: ['apple_health'],
+        sleepHours: 7.2,
+        restingHr: 58,
+        hrvMs: 42,
         steps: 352,
         activeEnergyKcal: 7.5,
         walkingRunningDistanceKm: 0.25,
@@ -37,11 +31,12 @@ test('Today computes an automatic readiness preview from last-night Health Auto 
   };
 
   const today = selectToday(state, '2026-06-28');
+
   assert.equal(today.checkin?.date, '2026-06-28');
-  assert.equal(today.readinessCheckin.sleepHours, 6.4);
-  assert.equal(today.readinessCheckin.autoMetricDates.sleepHours, '2026-06-27');
+  assert.equal(today.readinessCheckin.sleepHours, 7.2);
+  assert.equal(today.readinessCheckin.autoMetricDates.sleepHours, '2026-06-28');
   assert.equal(today.readinessCheckin.autoMetricEffectiveDates.sleepHours, '2026-06-28');
-  assert.equal(today.autoReadinessContext.recoveryDatePolicy, 'wake_day_v1');
+  assert.equal(today.autoReadinessContext.recoveryDatePolicy, 'wake_day_v2');
   assert.ok(today.readiness);
   assert.ok(today.recovery);
 });
