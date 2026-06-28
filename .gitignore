@@ -32,3 +32,7 @@ cloud-backup-setup-result.json
 
 # Local Apple Health Shortcuts Bridge setup (contains a secret token)
 apple-health-shortcut-setup-result.local.json
+
+# Local AI Coach setup (contains a secret Worker access token)
+workers/ai-coach/wrangler.jsonc
+ai-coach-setup-result.local.json

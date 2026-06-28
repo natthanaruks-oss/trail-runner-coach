@@ -155,6 +155,6 @@ function sanitizeSnapshotSecrets(snapshot) {
       backup.autoBackupEnabled = false;
     }
     const appleShortcut = row?.integrations?.appleHealthShortcut;
-    if (appleShortcut) appleShortcut.accessToken = '';
+    if (appleShortcut) appleShortcut.accessToken = ''; const aiCoach = row?.integrations?.aiCoach; if (aiCoach) aiCoach.accessToken = '';
   }
 }

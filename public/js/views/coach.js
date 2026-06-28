@@ -25,7 +25,18 @@ export function renderCoach(container, state, app) {
 
     <section class="card trail-coach-hero tone-${escapeHtml(coach.prescription.hardStop ? 'risk' : scoreTone(unified.readiness.score))}">
       <div class="trail-coach-hero-head">
-        <div><div class="eyebrow">${en ? 'TODAY’S PRESCRIPTION' : 'คำแนะนำการฝึกวันนี้'}</div><h2>${escapeHtml(prescription.title)}</h2><p>${escapeHtml(prescription.detail)}</p></div>
+        <div><div class="eyebrow"><section class="card flat" style="margin-bottom:14px">
+  <div class="section-head">
+    <div>
+      <div class="card-title">${en ? 'Controlled AI layer' : 'AI แบบมี Guardrails'}</div>
+      <strong>${en ? 'Local Coach decides. AI explains.' : 'Local Coach ตัดสิน ส่วน AI ช่วยอธิบาย'}</strong>
+    </div>
+    <a class="button secondary" href="#/ai-coach">
+      ${en ? 'Open AI Coach' : 'เปิด AI Coach'}
+    </a>
+  </div>
+</section>
+${en ? 'TODAY’S PRESCRIPTION' : 'คำแนะนำการฝึกวันนี้'}</div><h2>${escapeHtml(prescription.title)}</h2><p>${escapeHtml(prescription.detail)}</p></div>
         <div class="trail-coach-confidence"><strong>${coach.prescription.confidence}%</strong><span>${en ? 'confidence' : 'ความมั่นใจ'}</span></div>
       </div>
       <div class="trail-prescription-grid">
