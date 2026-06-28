@@ -1,6 +1,6 @@
 {
   "name": "trail-runner-coach",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "type": "module",
   "description": "Mobile-first trail coach with a unified recovery, training load and energy dashboard",

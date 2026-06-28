@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { createInterface } from 'node:readline/promises';
-import readline from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -18,16 +17,23 @@ import { fileURLToPath } from 'node:url';
 import {
   buildSetupReceipt,
   buildWorkerConfig,
+  DEFAULT_WORKERS_AI_MODEL,
   normalizeHttpsOrigin,
   normalizeModel,
   normalizeWorkerName,
   parseWranglerWorkerUrl
 } from './lib/ai-coach-setup.mjs';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const root = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..'
+);
 const workerDir = resolve(root, 'workers/ai-coach');
 const configPath = resolve(workerDir, 'wrangler.jsonc');
-const receiptPath = resolve(root, 'ai-coach-setup-result.local.json');
+const receiptPath = resolve(
+  root,
+  'ai-coach-setup-result.local.json'
+);
 const headersPath = resolve(root, 'public/_headers');
 const rl = createInterface({ input, output });
 
@@ -41,9 +47,11 @@ main()
 async function main() {
   ensureNode22();
 
-  console.log('\nTrail Runner Coach — AI Coach Setup Wizard');
   console.log(
-    'ระบบจะ Deploy Worker แยก, เก็บ OpenAI API Key เป็น Cloudflare Secret และสร้าง Access Token สำหรับแอป\n'
+    '\nTrail Runner Coach — Cloudflare Workers AI Setup'
+  );
+  console.log(
+    'ไม่ต้องใช้ OpenAI API Key ระบบจะใช้ Workers AI Binding และสร้าง Access Token สำหรับแอป\n'
   );
 
   const appOrigin = normalizeHttpsOrigin(
@@ -52,24 +60,31 @@ async function main() {
       'https://trail-runner-coaches.natthanaruk-s.workers.dev'
     )
   );
-  const workerName = normalizeWorkerName(
-    await ask('Cloudflare Worker name', 'trail-runner-coach-ai')
-  );
-  const model = normalizeModel(
-    await ask('OpenAI model', 'gpt-5.4-mini')
-  );
-  const openAiKey =
-    process.env.OPENAI_API_KEY || (await askHidden('OpenAI API Key'));
 
-  if (openAiKey.trim().length < 20) {
-    throw new Error('OpenAI API Key ไม่ถูกต้อง');
-  }
+  const workerName = normalizeWorkerName(
+    await ask(
+      'Cloudflare Worker name',
+      'trail-runner-coach-ai'
+    )
+  );
+
+  const model = normalizeModel(
+    await ask(
+      'Workers AI model',
+      DEFAULT_WORKERS_AI_MODEL
+    )
+  );
 
   await mkdir(workerDir, { recursive: true });
+
   await writeFile(
     configPath,
     `${JSON.stringify(
-      buildWorkerConfig({ appOrigin, workerName, model }),
+      buildWorkerConfig({
+        appOrigin,
+        workerName,
+        model
+      }),
       null,
       2
     )}\n`,
@@ -77,14 +92,21 @@ async function main() {
   );
 
   console.log('\n[1/3] ตรวจ Cloudflare API Token');
-  const whoami = await runWrangler(['whoami'], { quietFailure: true });
+  const whoami = await runWrangler(
+    ['whoami'],
+    { quietFailure: true }
+  );
+
   if (whoami.code !== 0) {
     throw new Error(
       'Wrangler ยังไม่เห็น CLOUDFLARE_API_TOKEN กรุณา export Token ใน Terminal เดียวกันก่อนรัน Setup'
     );
   }
 
-  console.log('\n[2/3] ตั้ง Secrets และ Deploy AI Coach Worker');
+  console.log(
+    '\n[2/3] ตั้ง Access Token และ Deploy Workers AI'
+  );
+
   const accessToken = randomBytes(36).toString('base64url');
   const secretsPath = resolve(
     tmpdir(),
@@ -94,14 +116,15 @@ async function main() {
   await writeFile(
     secretsPath,
     JSON.stringify({
-      OPENAI_API_KEY: openAiKey.trim(),
       AI_COACH_ACCESS_TOKEN: accessToken
     }),
     { encoding: 'utf8', mode: 0o600 }
   );
+
   await chmod(secretsPath, 0o600).catch(() => {});
 
   let deploy;
+
   try {
     deploy = await runWrangler([
       'deploy',
@@ -115,7 +138,9 @@ async function main() {
   }
 
   if (deploy.code !== 0) {
-    throw new Error('Deploy AI Coach Worker ไม่สำเร็จ');
+    throw new Error(
+      'Deploy Cloudflare Workers AI ไม่สำเร็จ'
+    );
   }
 
   let workerUrl = parseWranglerWorkerUrl(
@@ -124,7 +149,9 @@ async function main() {
 
   if (!workerUrl) {
     workerUrl = normalizeHttpsOrigin(
-      await ask('กรุณาวาง Worker URL ที่ Cloudflare แสดง')
+      await ask(
+        'กรุณาวาง Worker URL ที่ Cloudflare แสดง'
+      )
     );
   }
 
@@ -140,20 +167,23 @@ async function main() {
     `${JSON.stringify(receipt, null, 2)}\n`,
     { encoding: 'utf8', mode: 0o600 }
   );
+
   await chmod(receiptPath, 0o600).catch(() => {});
   await allowWorkerInCsp(workerUrl);
 
   console.log('\n[3/3] Setup สำเร็จ');
+  console.log('Provider: Cloudflare Workers AI');
   console.log(`Worker URL: ${receipt.baseUrl}`);
   console.log(`Model: ${receipt.model}`);
   console.log(`Receipt: ${receiptPath}`);
   console.log(
-    '\nReceipt มี Access Token: ห้าม Commit และห้ามส่งให้ผู้อื่น นำเข้าในหน้า AI Coach แล้วลบไฟล์ได้\n'
+    '\nไม่ต้องใช้ OpenAI API Key\nReceipt มี Access Token: ห้าม Commit และห้ามส่งให้ผู้อื่น นำเข้าในหน้า AI Coach แล้วลบไฟล์ได้\n'
   );
 }
 
 function ensureNode22() {
   const major = Number(process.versions.node.split('.')[0]);
+
   if (major < 22) {
     throw new Error(
       `ต้องใช้ Node.js 22 ขึ้นไป (ปัจจุบัน ${process.versions.node})`
@@ -162,60 +192,15 @@ function ensureNode22() {
 }
 
 async function ask(label, defaultValue = '') {
-  const suffix = defaultValue ? ` [${defaultValue}]` : '';
-  const value = (await rl.question(`${label}${suffix}: `)).trim();
+  const suffix = defaultValue
+    ? ` [${defaultValue}]`
+    : '';
+
+  const value = (
+    await rl.question(`${label}${suffix}: `)
+  ).trim();
+
   return value || defaultValue;
-}
-
-async function askHidden(label) {
-  if (!input.isTTY || !output.isTTY) {
-    return (await rl.question(`${label}: `)).trim();
-  }
-
-  rl.pause();
-  readline.emitKeypressEvents(input);
-  input.setRawMode(true);
-  output.write(`${label}: `);
-
-  return new Promise((resolvePromise, reject) => {
-    let value = '';
-
-    const cleanup = () => {
-      input.off('keypress', onKeypress);
-      input.setRawMode(false);
-      rl.resume();
-      output.write('\n');
-    };
-
-    const onKeypress = (char, key = {}) => {
-      if (key.ctrl && key.name === 'c') {
-        cleanup();
-        reject(new Error('ยกเลิกโดยผู้ใช้'));
-        return;
-      }
-
-      if (key.name === 'return' || key.name === 'enter') {
-        cleanup();
-        resolvePromise(value.trim());
-        return;
-      }
-
-      if (key.name === 'backspace') {
-        if (value) {
-          value = value.slice(0, -1);
-          output.write('\b \b');
-        }
-        return;
-      }
-
-      if (char && !key.ctrl && !key.meta && char >= ' ') {
-        value += char;
-        output.write('•');
-      }
-    };
-
-    input.on('keypress', onKeypress);
-  });
 }
 
 async function allowWorkerInCsp(workerUrl) {
@@ -223,11 +208,15 @@ async function allowWorkerInCsp(workerUrl) {
 
   const text = await readFile(headersPath, 'utf8');
   const origin = normalizeHttpsOrigin(workerUrl);
+
   if (text.includes(origin)) return;
 
   const marker = "connect-src 'self'";
+
   if (!text.includes(marker)) {
-    throw new Error('ไม่พบ connect-src ใน public/_headers');
+    throw new Error(
+      'ไม่พบ connect-src ใน public/_headers'
+    );
   }
 
   await writeFile(
@@ -237,14 +226,25 @@ async function allowWorkerInCsp(workerUrl) {
   );
 }
 
-async function runWrangler(args, { quietFailure = false } = {}) {
-  const executable = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const child = spawn(executable, ['wrangler', ...args], {
-    cwd: workerDir,
-    env: process.env,
-    shell: false,
-    stdio: ['inherit', 'pipe', 'pipe']
-  });
+async function runWrangler(
+  args,
+  { quietFailure = false } = {}
+) {
+  const executable =
+    process.platform === 'win32'
+      ? 'npx.cmd'
+      : 'npx';
+
+  const child = spawn(
+    executable,
+    ['wrangler', ...args],
+    {
+      cwd: workerDir,
+      env: process.env,
+      shell: false,
+      stdio: ['inherit', 'pipe', 'pipe']
+    }
+  );
 
   let stdout = '';
   let stderr = '';
@@ -258,13 +258,18 @@ async function runWrangler(args, { quietFailure = false } = {}) {
   child.stderr.on('data', chunk => {
     const text = chunk.toString();
     stderr += text;
-    if (!quietFailure) process.stderr.write(text);
+
+    if (!quietFailure) {
+      process.stderr.write(text);
+    }
   });
 
-  const code = await new Promise((resolvePromise, reject) => {
-    child.on('error', reject);
-    child.on('close', resolvePromise);
-  });
+  const code = await new Promise(
+    (resolvePromise, reject) => {
+      child.on('error', reject);
+      child.on('close', resolvePromise);
+    }
+  );
 
   return { code, stdout, stderr };
 }

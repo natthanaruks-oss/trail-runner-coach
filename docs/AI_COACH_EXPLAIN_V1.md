@@ -1,73 +1,85 @@
-# AI Coach Explain v3
+# AI Coach — Cloudflare Workers AI
 
-## Purpose
+## Architecture
 
-AI Coach Explain v1 adds a controlled explanation layer on top of the existing
-deterministic Trail Coach.
+The deterministic Local Coach remains the source of truth.
 
-The Local Coach remains the source of truth.
+Cloudflare Workers AI only explains the existing decision. It cannot change:
 
-## Safety architecture
+- action code
+- red/yellow/green status
+- safety lock
+- distance
+- vertical
+- intensity
+- rest or pain guidance
 
-1. The browser builds a summarized snapshot.
-2. Raw health rows, name, email and API keys are excluded.
-3. A separate Cloudflare Worker authenticates the app with a bearer token.
-4. The Worker calls the OpenAI Responses API with `store: false`.
-5. Structured output must echo:
-   - action code
-   - red/yellow/green status
-   - hard-stop safety lock
-6. The Worker and browser both reject any mismatch.
-7. AI returns text only. It cannot modify the plan or write to IndexedDB.
+The browser and Worker both validate the returned explanation.
 
-## Data sent
+## Provider
 
-- date and language
-- planned session summary
-- deterministic prescription
-- readiness/recovery/load/energy scores
-- race countdown summary
-- long-run evidence summary
-- reason codes and missing-data flags
+Default model:
 
-## Data not sent
+```text
+@cf/qwen/qwen3-30b-a3b-fp8
+```
 
-- raw Apple Health rows
-- raw workout streams
-- name or email
-- OpenAI API key
-- Cloudflare API token
-- app backup encryption material
+The Worker uses an `AI` binding:
+
+```json
+{
+  "ai": {
+    "binding": "AI"
+  }
+}
+```
+
+No OpenAI API key is required.
+
+## Secrets
+
+Only one Worker secret is required:
+
+```text
+AI_COACH_ACCESS_TOKEN
+```
+
+The setup wizard generates this automatically and stores it through Wrangler.
 
 ## Setup
-
-Run:
 
 ```bash
 npm run setup:ai-coach
 ```
 
-The wizard creates and deploys a separate Worker and writes:
+The wizard asks for:
+
+- production web-app URL
+- Worker name
+- Workers AI model
+
+It creates:
 
 ```text
 ai-coach-setup-result.local.json
 ```
 
-Import that receipt in the AI Coach page. The receipt contains the Worker access
-token and must never be committed or shared.
+Import this receipt into the AI Coach page, then delete the local receipt.
 
-## Non-goals in v1
+## Privacy
 
-- free-form chat
-- automatic plan modification
-- medical diagnosis
-- injury prediction
-- sending raw health history to an external model
+The AI snapshot excludes:
 
+- raw health rows
+- workout streams
+- name and email
+- API keys
+- Cloudflare deployment credentials
 
-## Installer reliability v3
+## Cost control
 
-- Feature-pack tests are stored as non-discoverable templates.
-- Old extracted v1/v2 pack directories are removed only when they are not tracked by Git.
-- Privacy validation checks exact object keys recursively instead of matching substrings in serialized JSON.
-- The installation verification runs the full Node test suite serially to avoid JSDOM timeout contention.
+- Browser cache: 12 hours per snapshot
+- Output limit: 700 tokens
+- One retry only when structured output fails
+- AI never runs automatically
+- Users explicitly press Ask AI Coach

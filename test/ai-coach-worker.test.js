@@ -6,9 +6,13 @@ import {
 
 const env = {
   APP_ORIGIN: 'https://app.example',
-  OPENAI_MODEL: 'gpt-5.4-mini',
-  OPENAI_API_KEY: 'sk-test-secret',
-  AI_COACH_ACCESS_TOKEN: 'a'.repeat(48)
+  WORKERS_AI_MODEL: '@cf/qwen/qwen3-30b-a3b-fp8',
+  AI_COACH_ACCESS_TOKEN: 'a'.repeat(48),
+  AI: {
+    run: async () => {
+      throw new Error('Test must inject runModel');
+    }
+  }
 };
 
 const snapshot = {
@@ -36,41 +40,52 @@ const snapshot = {
   }
 };
 
-function request(body = snapshot) {
-  return new Request('https://worker.example/v1/explain', {
-    method: 'POST',
-    headers: {
-      Origin: env.APP_ORIGIN,
-      Authorization: `Bearer ${env.AI_COACH_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ snapshot: body })
-  });
+function request(body = snapshot, token = env.AI_COACH_ACCESS_TOKEN) {
+  return new Request(
+    'https://worker.example/v1/explain',
+    {
+      method: 'POST',
+      headers: {
+        Origin: env.APP_ORIGIN,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ snapshot: body })
+    }
+  );
 }
 
-test('AI Coach Worker returns structured explanation and does not store responses', async () => {
-  let openAiRequest;
+function validExplanation(overrides = {}) {
+  return {
+    actionCodeEcho: 'follow_plan',
+    statusEcho: 'green',
+    safetyLockEcho: false,
+    headline: 'ทำตามแผนได้',
+    summary:
+      'สัญญาณปัจจุบันสนับสนุน Easy session ตามแผน',
+    todayPlan: 'Easy 5 km และ Vertical 80 m',
+    why: [
+      'Recovery และ Readiness อยู่ในระดับสนับสนุนแผน'
+    ],
+    watchFor: ['อย่าเพิ่มความหนักนอกแผน'],
+    checkAfter: 'ประเมินความรู้สึกหลัง 10 นาทีแรก',
+    safetyNote:
+      'หยุดหากมี Pain หรืออาการผิดปกติ',
+    ...overrides
+  };
+}
+
+test('Workers AI returns structured explanation with the configured model', async () => {
+  let calledModel;
+  let calledInput;
 
   const handler = createAiCoachHandler({
-    fetchImpl: async (_url, init) => {
-      openAiRequest = JSON.parse(init.body);
-      return new Response(
-        JSON.stringify({
-          output_text: JSON.stringify({
-            actionCodeEcho: 'follow_plan',
-            statusEcho: 'green',
-            safetyLockEcho: false,
-            headline: 'ทำตามแผนได้',
-            summary: 'สัญญาณปัจจุบันสนับสนุน Easy session ตามแผน',
-            todayPlan: 'Easy 5 km และ Vertical 80 m',
-            why: ['Recovery และ Readiness อยู่ในระดับสนับสนุนแผน'],
-            watchFor: ['อย่าเพิ่มความหนักนอกแผน'],
-            checkAfter: 'ประเมินความรู้สึกหลัง 10 นาทีแรก',
-            safetyNote: 'หยุดหากมี Pain หรืออาการผิดปกติ'
-          })
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
+    runModel: async (model, input) => {
+      calledModel = model;
+      calledInput = input;
+      return {
+        response: validExplanation()
+      };
     }
   });
 
@@ -78,65 +93,76 @@ test('AI Coach Worker returns structured explanation and does not store response
   const body = await response.json();
 
   assert.equal(response.status, 200);
+  assert.equal(body.provider, 'cloudflare-workers-ai');
   assert.equal(body.explanation.actionCodeEcho, 'follow_plan');
-  assert.equal(openAiRequest.store, false);
-  assert.equal(openAiRequest.model, 'gpt-5.4-mini');
-  assert.equal(openAiRequest.text.format.type, 'json_schema');
-  assert.doesNotMatch(JSON.stringify(openAiRequest.input), /sk-test-secret/);
+  assert.equal(
+    calledModel,
+    '@cf/qwen/qwen3-30b-a3b-fp8'
+  );
+  assert.equal(
+    calledInput.response_format.type,
+    'json_schema'
+  );
+  assert.equal(calledInput.stream, false);
 });
 
-test('AI Coach Worker rejects wrong bearer token', async () => {
+test('Workers AI string JSON response is parsed safely', async () => {
   const handler = createAiCoachHandler({
-    fetchImpl: async () => {
-      throw new Error('must not call OpenAI');
+    runModel: async () => ({
+      response: JSON.stringify(validExplanation())
+    })
+  });
+
+  const response = await handler(request(), env);
+  assert.equal(response.status, 200);
+});
+
+test('Worker rejects wrong bearer token before calling AI', async () => {
+  let called = false;
+
+  const handler = createAiCoachHandler({
+    runModel: async () => {
+      called = true;
+      return { response: validExplanation() };
     }
   });
 
-  const badRequest = new Request('https://worker.example/v1/explain', {
-    method: 'POST',
-    headers: {
-      Origin: env.APP_ORIGIN,
-      Authorization: 'Bearer wrong-token',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ snapshot })
-  });
+  const response = await handler(
+    request(snapshot, 'wrong-token'),
+    env
+  );
 
-  const response = await handler(badRequest, env);
   assert.equal(response.status, 401);
+  assert.equal(called, false);
 });
 
-test('AI Coach Worker rejects an output that changes the action', async () => {
+test('Worker rejects an explanation that changes the Local Coach action', async () => {
   const handler = createAiCoachHandler({
-    fetchImpl: async () =>
-      new Response(
-        JSON.stringify({
-          output_text: JSON.stringify({
-            actionCodeEcho: 'reduce_25',
-            statusEcho: 'yellow',
-            safetyLockEcho: false,
-            headline: 'เพิ่มงาน',
-            summary: 'ผิด',
-            todayPlan: 'Tempo',
-            why: [],
-            watchFor: [],
-            checkAfter: 'หลังซ้อม',
-            safetyNote: 'ระวัง'
-          })
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
+    runModel: async () => ({
+      response: validExplanation({
+        actionCodeEcho: 'reduce_25',
+        statusEcho: 'yellow'
+      })
+    })
   });
 
   const response = await handler(request(), env);
   const body = await response.json();
 
   assert.equal(response.status, 502);
-  assert.match(body.error, /changed the Local Coach action/);
+  assert.match(
+    body.error,
+    /changed the Local Coach action/
+  );
 });
 
-test('AI Coach Worker refuses raw health data', async () => {
-  const handler = createAiCoachHandler();
+test('Worker refuses raw health data', async () => {
+  const handler = createAiCoachHandler({
+    runModel: async () => ({
+      response: validExplanation()
+    })
+  });
+
   const response = await handler(
     request({
       ...snapshot,
@@ -149,4 +175,18 @@ test('AI Coach Worker refuses raw health data', async () => {
   );
 
   assert.equal(response.status, 400);
+});
+
+test('Worker requires a Workers AI binding', async () => {
+  const handler = createAiCoachHandler();
+
+  const response = await handler(
+    request(),
+    {
+      ...env,
+      AI: undefined
+    }
+  );
+
+  assert.equal(response.status, 503);
 });

@@ -3,34 +3,52 @@ import assert from 'node:assert/strict';
 import {
   buildSetupReceipt,
   buildWorkerConfig,
+  DEFAULT_WORKERS_AI_MODEL,
+  normalizeModel,
   parseWranglerWorkerUrl
 } from '../scripts/lib/ai-coach-setup.mjs';
 
-test('AI Coach Worker config declares secrets without storing secret values', () => {
+test('Worker config uses a Cloudflare AI binding and no provider API key', () => {
   const config = buildWorkerConfig({
     appOrigin: 'https://app.example',
-    workerName: 'trail-runner-coach-ai',
-    model: 'gpt-5.4-mini'
+    workerName: 'trail-runner-coach-ai'
   });
 
-  assert.deepEqual(config.secrets.required, [
-    'OPENAI_API_KEY',
-    'AI_COACH_ACCESS_TOKEN'
-  ]);
-  assert.equal(config.vars.APP_ORIGIN, 'https://app.example');
-  assert.equal(config.vars.OPENAI_MODEL, 'gpt-5.4-mini');
-  assert.doesNotMatch(JSON.stringify(config), /sk-/);
+  assert.deepEqual(config.ai, { binding: 'AI' });
+  assert.equal(
+    config.vars.WORKERS_AI_MODEL,
+    '@cf/qwen/qwen3-30b-a3b-fp8'
+  );
+  assert.equal(
+    JSON.stringify(config).includes('OPENAI_API_KEY'),
+    false
+  );
 });
 
-test('AI Coach receipt contains only Worker credential and no OpenAI key', () => {
+test('default Workers AI model is normalized safely', () => {
+  assert.equal(
+    normalizeModel(DEFAULT_WORKERS_AI_MODEL),
+    DEFAULT_WORKERS_AI_MODEL
+  );
+  assert.throws(
+    () => normalizeModel('gpt-5.4-mini'),
+    /Workers AI model ID/
+  );
+});
+
+test('setup receipt identifies Cloudflare Workers AI and contains no provider key', () => {
   const receipt = buildSetupReceipt({
-    workerUrl: 'https://trail-runner-coach-ai.example.workers.dev',
+    workerUrl:
+      'https://trail-runner-coach-ai.example.workers.dev',
     workerName: 'trail-runner-coach-ai',
-    model: 'gpt-5.4-mini',
+    model: DEFAULT_WORKERS_AI_MODEL,
     accessToken: 'a'.repeat(48)
   });
 
-  assert.equal(receipt.kind, 'trail-runner-coach-ai-coach-v1');
+  assert.equal(
+    receipt.provider,
+    'cloudflare-workers-ai'
+  );
   assert.equal(receipt.accessToken.length, 48);
   assert.equal('openAiKey' in receipt, false);
 });
