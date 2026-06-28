@@ -1,6 +1,5 @@
 import {
   appleHealthConnectionMode,
-  buildAppleShortcutRunUrl,
   fetchAppleHealthShortcutPayload,
   fetchAppleHealthShortcutStatus,
   getAppleHealthShortcutConfig,
@@ -27,21 +26,21 @@ export function renderAppleHealthShortcut(container, state, app) {
 
   container.innerHTML = `
     ${pageHeader(
-      en ? 'Apple Health Shortcut' : 'Apple Health ผ่าน Shortcuts',
-      en ? 'Send daily recovery and body metrics from iPhone Health without changing the Strava sync.' : 'ส่งข้อมูล Recovery และ Body metrics จาก Health บน iPhone โดยไม่แตะระบบ Strava Sync',
+      en ? 'Apple Health Sync' : 'Apple Health Sync',
+      en ? 'Automatically send Apple Health metrics with Health Auto Export REST API, while keeping Strava workouts unchanged.' : 'ส่งข้อมูล Apple Health อัตโนมัติผ่าน Health Auto Export REST API โดยไม่กระทบ Workout จาก Strava',
       'APPLE HEALTH BRIDGE'
     )}
 
     <section class="connection-overview card flat ${configured || mode === 'native' ? 'ready' : ''}">
       <div class="connection-overview-copy">
-        <span class="status ${configured || mode === 'native' ? 'green' : 'yellow'}">${mode === 'native' ? (en ? 'Native HealthKit ready' : 'Native HealthKit พร้อม') : configured ? (en ? 'Shortcut bridge ready' : 'Shortcuts Bridge พร้อม') : (en ? 'Setup required' : 'ต้องตั้งค่าก่อน')}</span>
-        <h2>${mode === 'native' ? (en ? 'Using iOS Companion' : 'กำลังใช้ iOS Companion') : (en ? 'Apple Health daily bridge' : 'สะพานข้อมูล Apple Health รายวัน')}</h2>
+        <span class="status ${configured || mode === 'native' ? 'green' : 'yellow'}">${mode === 'native' ? (en ? 'Native HealthKit ready' : 'Native HealthKit พร้อม') : configured ? (en ? 'Apple Health API bridge ready' : 'Apple Health API Bridge พร้อม') : (en ? 'Setup required' : 'ต้องตั้งค่าก่อน')}</span>
+        <h2>${mode === 'native' ? (en ? 'Using iOS Companion' : 'กำลังใช้ iOS Companion') : (en ? 'Automatic Apple Health data bridge' : 'เชื่อมข้อมูล Apple Health อัตโนมัติ')}</h2>
         <p>${en ? 'Recommended: let Strava own workouts and use Apple Health for sleep, RHR, HRV, steps, energy and body metrics.' : 'แนะนำให้ Strava เป็นแหล่ง Workout และใช้ Apple Health สำหรับ Sleep, RHR, HRV, Steps, Energy และ Body metrics เพื่อลดข้อมูลซ้ำ'}</p>
       </div>
       <div class="connection-overview-actions">
         <button class="button primary" type="button" data-apple-shortcut-sync ${configured || mode === 'native' ? '' : 'disabled'}>${en ? 'Pull latest data' : 'ดึงข้อมูลล่าสุด'}</button>
         <button class="button secondary" type="button" data-apple-shortcut-diagnose ${configured ? '' : 'disabled'}>${en ? 'Check Worker data' : 'ตรวจข้อมูลบน Worker'}</button>
-        <a class="button secondary" href="${escapeHtml(buildAppleShortcutRunUrl(state.settings))}" ${configured ? '' : 'aria-disabled="true"'}>${en ? 'Run shortcut' : 'เปิด Shortcut'}</a>
+        <a class="button secondary" href="https://apps.apple.com/app/id1115567069" target="_blank" rel="noopener">${en ? 'Open Health Auto Export' : 'เปิด Health Auto Export'}</a>
       </div>
     </section>
     <div class="wizard-status submetric ${providerState.status === 'error' || providerState.status === 'auth_error' ? 'error' : health.hasData ? 'success' : ''}" id="apple-live-sync-status">${liveSyncStatus(health, providerState, en)}</div>
@@ -49,7 +48,7 @@ export function renderAppleHealthShortcut(container, state, app) {
     ${renderHealthData(health, today, en)}
 
     <details class="health-advanced-settings" ${configured ? '' : 'open'}>
-      <summary><span>${en ? 'Bridge setup and advanced settings' : 'ตั้งค่า Bridge และตัวเลือกขั้นสูง'}</span><small>${configured ? (en ? 'Configured' : 'ตั้งค่าแล้ว') : (en ? 'Setup required' : 'ต้องตั้งค่า')}</small></summary>
+      <summary><span>${en ? 'Bridge and Health Auto Export settings' : 'ตั้งค่า Bridge และ Health Auto Export'}</span><small>${configured ? (en ? 'Configured' : 'ตั้งค่าแล้ว') : (en ? 'Setup required' : 'ต้องตั้งค่า')}</small></summary>
       <div class="health-advanced-settings-body">
     <section class="section">
       <div class="section-head"><h2>${en ? '1. Deploy the separate bridge' : '1. Deploy Bridge แยกจาก Strava'}</h2><span>${en ? 'One-time setup' : 'ทำครั้งเดียว'}</span></div>
@@ -66,7 +65,7 @@ export function renderAppleHealthShortcut(container, state, app) {
         <form id="apple-shortcut-form" class="form-grid">
           <div class="field full"><label>${en ? 'Worker URL' : 'Worker URL'}</label><input name="baseUrl" type="url" placeholder="https://trail-runner-coach-apple-health-sync.YOUR.workers.dev" value="${escapeHtml(config.baseUrl)}"></div>
           <div class="field full"><label>${en ? 'Bridge token' : 'Bridge Token'}</label><input name="accessToken" type="password" autocomplete="off" placeholder="Paste the generated token" value="${escapeHtml(config.accessToken)}"></div>
-          <div class="field full"><label>${en ? 'Shortcut name' : 'ชื่อ Shortcut'}</label><input name="shortcutName" value="${escapeHtml(config.shortcutName)}"></div>
+          <input name="shortcutName" type="hidden" value="${escapeHtml(config.shortcutName)}">
           <div class="field full"><label>${en ? 'Import local setup result' : 'นำเข้าไฟล์ Setup'}</label><input name="receipt" type="file" accept="application/json,.json"></div>
           <button class="button primary" type="submit">${en ? 'Save and test' : 'บันทึกและทดสอบ'}</button>
           <button class="button secondary" type="button" data-apple-shortcut-test ${configured ? '' : 'disabled'}>${en ? 'Test again' : 'ทดสอบอีกครั้ง'}</button>
@@ -81,44 +80,34 @@ export function renderAppleHealthShortcut(container, state, app) {
     </section>
 
     <section class="section">
-      <div class="section-head"><h2>${en ? '3. Build the iPhone shortcut' : '3. สร้าง Shortcut บน iPhone'}</h2><span>${en ? 'Daily recovery data' : 'ข้อมูล Recovery รายวัน'}</span></div>
+      <div class="section-head"><h2>${en ? '3. Configure Health Auto Export' : '3. ตั้งค่า Health Auto Export'}</h2><span>${en ? 'No Shortcut actions' : 'ไม่ต้องสร้าง Shortcut'}</span></div>
       <div class="list shortcut-steps">
-        ${step('1', en ? 'Create a shortcut named TRC Apple Health Sync' : 'สร้าง Shortcut ชื่อ TRC Apple Health Sync', en ? 'Use Find Health Samples actions to read the latest health values.' : 'ใช้คำสั่ง Find Health Samples เพื่ออ่านค่าล่าสุดจาก Health')}
-        ${step('2', en ? 'Collect the recommended fields' : 'เก็บค่าที่แนะนำ', 'Sleep Hours, Resting HR, HRV, Steps, Active Energy, Exercise Minutes, Walking/Running Distance, Weight, Body Fat')}
-        ${step('3', en ? 'Create a Dictionary payload' : 'สร้าง Dictionary', en ? 'Use date format yyyy-MM-dd and the field names shown below.' : 'ใช้วันที่รูปแบบ yyyy-MM-dd และชื่อ Field ตามตัวอย่างด้านล่าง')}
-        ${step('4', en ? 'POST with Get Contents of URL' : 'ส่งด้วย Get Contents of URL', en ? 'Method POST · Request Body JSON · Authorization header: Bearer + your token.' : 'Method POST · Request Body JSON · Header Authorization = Bearer ตามด้วย Token')}
-        ${step('5', en ? 'Run once and grant Health permissions' : 'รันครั้งแรกและอนุญาต Health', en ? 'Allow only the health categories you selected.' : 'อนุญาตเฉพาะหมวดข้อมูลที่เลือก')}
-        ${step('6', en ? 'Create a morning Personal Automation' : 'ตั้ง Personal Automation ตอนเช้า', en ? 'Run after waking up, then open this app and pull the latest data.' : 'ให้ทำงานหลังตื่นนอน จากนั้นเปิดแอปและกดดึงข้อมูลล่าสุด')}
+        ${step('1', en ? 'Install Health Auto Export' : 'ติดตั้ง Health Auto Export', en ? 'Open the app, allow the Apple Health categories below, then start a REST API automation.' : 'เปิดแอป อนุญาตหมวด Apple Health ด้านล่าง แล้วสร้าง REST API Automation')}
+        ${step('2', en ? 'Create REST API automation' : 'สร้าง REST API Automation', en ? 'Automated Exports → New Automation → REST API.' : 'Automated Exports → New Automation → REST API')}
+        ${step('3', en ? 'Paste the POST URL and token' : 'วาง POST URL และ Token', en ? 'URL = POST URL above. Header = Authorization: Bearer + Bridge Token.' : 'URL ใช้ POST URL ด้านบน และ Header = Authorization: Bearer ตามด้วย Bridge Token')}
+        ${step('4', en ? 'Select only the recommended metrics' : 'เลือกเฉพาะ Metric ที่แนะนำ', 'Step Count, Active Energy, Apple Exercise Time, Walking + Running Distance, Sleep Analysis, Resting Heart Rate, Heart Rate Variability, Weight & Body Mass, Body Fat Percentage')}
+        ${step('5', en ? 'Use compact JSON settings' : 'ตั้งค่า JSON แบบกระชับ', en ? 'JSON · Export Version 2 · Summarize Data ON · Time Grouping Day · Workouts OFF.' : 'JSON · Export Version 2 · Summarize Data เปิด · Time Grouping = Day · ไม่เลือก Workouts')}
+        ${step('6', en ? 'Test, then enable automatic sync' : 'ทดสอบแล้วเปิด Sync อัตโนมัติ', en ? 'Manual Export: Previous 7 Days. After success use Since Last Sync and a 1–6 hour cadence.' : 'Manual Export เลือก Previous 7 Days ก่อน เมื่อผ่านแล้วใช้ Since Last Sync และรอบ Sync ทุก 1–6 ชั่วโมง')}
       </div>
+      <div class="callout section"><strong>${en ? 'Recommended reliability settings' : 'ค่าที่แนะนำเพื่อความเสถียร'}:</strong> ${en ? 'Enable Background App Refresh, avoid Low Power Mode during the test, and unlock the iPhone because Apple does not allow health access while the device is locked.' : 'เปิด Background App Refresh, ปิด Low Power Mode ระหว่างทดสอบ และปลดล็อก iPhone เพราะ Apple ไม่อนุญาตให้อ่าน Health ขณะเครื่องล็อก'}</div>
       <details class="card flat shortcut-json-help">
-        <summary>${en ? 'Dictionary field template' : 'Template ชื่อ Field ใน Dictionary'}</summary>
-        <pre data-i18n-skip>{
-  "source": "apple_health",
-  "exportedAt": "Current Date (ISO 8601)",
-  "dailyMetric": {
-    "date": "yyyy-MM-dd",
-    "sleepHours": 7.2,
-    "restingHr": 54,
-    "hrvMs": 48,
-    "steps": 8240,
-    "activeEnergyKcal": 780,
-    "exerciseMinutes": 65,
-    "walkingRunningDistanceKm": 9.4,
-    "sourceDevice": "Apple Shortcuts"
-  },
-  "bodyComposition": {
-    "date": "yyyy-MM-dd",
-    "weightKg": 88.9,
-    "percentBodyFat": 27.5,
-    "sourceDevice": "Apple Shortcuts"
-  }
-}</pre>
+        <summary>${en ? 'Exact REST API values' : 'ค่าที่ต้องกรอกใน REST API'}</summary>
+        <div class="shortcut-credential-grid section">
+          <div><small>URL</small><code data-i18n-skip>${escapeHtml(importUrl || 'Setup bridge first')}</code></div>
+          <div><small>Header key</small><code data-i18n-skip>Authorization</code></div>
+          <div><small>Header value</small><code data-i18n-skip>Bearer ${escapeHtml(tokenMask)}</code></div>
+          <div><small>Content type</small><code data-i18n-skip>application/json</code></div>
+        </div>
+      </details>
+      <details class="card flat shortcut-json-help">
+        <summary>${en ? 'Legacy Shortcut backup' : 'Shortcut เดิมสำหรับสำรอง'}</summary>
+        <p>${en ? 'The Worker still accepts the old Trail Runner Coach Shortcut payload. Keep the old Shortcut only as a manual backup; Health Auto Export is the recommended primary method.' : 'Worker ยังรองรับ Payload จาก Shortcut เดิม เก็บ Shortcut ไว้เป็นวิธีสำรองได้ แต่แนะนำให้ใช้ Health Auto Export เป็นวิธีหลัก'}</p>
       </details>
     </section>
       </div>
     </details>
 
-    <section class="section callout"><strong>${en ? 'Data ownership rule' : 'กติกาแหล่งข้อมูล'}:</strong> ${en ? 'Do not add workout actions to the Shortcut while Strava is connected. This avoids duplicate activities.' : 'ระหว่างที่ Strava เชื่อมอยู่ ไม่ต้องใส่ Workout ใน Shortcut เพื่อลดกิจกรรมซ้ำ'}</section>`;
+    <section class="section callout"><strong>${en ? 'Data ownership rule' : 'กติกาแหล่งข้อมูล'}:</strong> ${en ? 'Do not select Workouts in Health Auto Export while Strava is connected. This avoids duplicate activities.' : 'ระหว่างที่ Strava เชื่อมอยู่ ไม่ต้องเลือก Workouts ใน Health Auto Export เพื่อลดกิจกรรมซ้ำ'}</section>`;
 
   bindActions(container, app, state, health);
 }
@@ -156,7 +145,7 @@ function renderHealthData(health, today, en) {
         ${usageRow(en ? 'Weight + Body Fat' : 'Weight + Body Fat', en ? 'Feeds Body Composition trends and nutrition calculations.' : 'ใช้ในแนวโน้ม Body Composition และการคำนวณโภชนาการ', body ? `${formatNumber(body.weightKg,1)} kg` : '—')}
       </div>
       <div class="button-row section"><a class="button secondary" href="#/scores">${en ? 'Open score details' : 'ดูรายละเอียดคะแนน'}</a><a class="button secondary" href="#/fuel">${en ? 'Open calories' : 'ดูพลังงานและอาหาร'}</a><a class="button secondary" href="#/body">${en ? 'Open body trends' : 'ดูแนวโน้มร่างกาย'}</a></div>
-    </article>` : `<div class="card flat empty">${en ? 'No Apple Health data has been pulled into the app yet. Run the Shortcut, then tap Pull latest data.' : 'ยังไม่มีข้อมูล Apple Health ในแอป ให้รัน Shortcut แล้วกด “ดึงข้อมูลล่าสุด”'}</div>`}
+    </article>` : `<div class="card flat empty">${en ? 'No Apple Health data has been pulled into the app yet. Run a Health Auto Export Manual Export, then tap Pull latest data.' : 'ยังไม่มีข้อมูล Apple Health ในแอป ให้กด Manual Export ใน Health Auto Export แล้วกด “ดึงข้อมูลล่าสุด”'}</div>`}
   </section>`;
 }
 

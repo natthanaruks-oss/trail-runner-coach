@@ -95,7 +95,7 @@ function providerCompactCard(provider, syncInfo = {}, configured, language, sett
       ${provider === 'apple_health'
         ? appleReady
           ? `<button class="button primary" type="button" data-compact-sync="apple_health" ${!syncing ? '' : 'disabled'}>${syncing ? (en ? 'Syncing…' : 'กำลัง Sync…') : (en ? 'Sync now' : 'Sync ตอนนี้')}</button><a class="button ghost" href="#/apple-health-shortcut">${appleMode === 'native' ? (en ? 'Details' : 'รายละเอียด') : (en ? 'Manage' : 'จัดการ')}</a>`
-          : `<a class="button primary" href="#/apple-health-shortcut">${en ? 'Set up Shortcut' : 'ตั้งค่า Shortcut'}</a>`
+          : `<a class="button primary" href="#/apple-health-shortcut">${en ? 'Set up Apple Health' : 'ตั้งค่า Apple Health'}</a>`
         : connected
           ? `<button class="button primary" type="button" data-compact-sync="${provider}" ${syncing ? 'disabled' : ''}>${syncing ? (en ? 'Syncing…' : 'กำลัง Sync…') : (en ? 'Sync now' : 'Sync ตอนนี้')}</button>`
           : `<button class="button primary" type="button" data-compact-connect="${provider}" ${canConnect ? '' : 'disabled'}>${en ? 'Connect' : 'เชื่อมต่อ'}</button>`}

@@ -56,7 +56,7 @@ export function renderConnections(container, state, app, options = {}) {
     ${googleHealthWizard(baseUrl, googleDetails, app.language)}
 
     <section class="connection-grid section">
-      ${providerCard('apple_health', { connected: appleBridge, status: appleBridge ? (appleMode === 'native' ? (en ? 'Native HealthKit ready' : 'Native HealthKit พร้อม') : (en ? 'Shortcuts bridge ready' : 'Shortcuts Bridge พร้อม')) : (en ? 'Set up Apple Health Shortcut' : 'ตั้งค่า Apple Health Shortcut') }, syncState.providers.apple_health, app.language)}
+      ${providerCard('apple_health', { connected: appleBridge, status: appleBridge ? (appleMode === 'native' ? (en ? 'Native HealthKit ready' : 'Native HealthKit พร้อม') : (en ? 'Apple Health API bridge ready' : 'Apple Health API Bridge พร้อม')) : (en ? 'Set up Apple Health' : 'ตั้งค่า Apple Health') }, syncState.providers.apple_health, app.language)}
       ${providerCard('google_health', { connected: syncState.providers.google_health.connected, status: baseUrl ? 'รอตรวจสถานะ' : (en ? 'Complete Google Health setup first' : 'ทำ Google Health Setup ก่อน') }, syncState.providers.google_health, app.language)}
       ${providerCard('garmin', { connected: syncState.providers.garmin.connected, status: baseUrl ? 'รอตรวจสถานะ' : 'ต้องตั้งค่า Worker' }, syncState.providers.garmin, app.language)}
       ${providerCard('suunto', { connected: syncState.providers.suunto.connected, status: baseUrl ? 'รอตรวจสถานะ' : 'ต้องตั้งค่า Worker' }, syncState.providers.suunto, app.language)}
@@ -80,13 +80,13 @@ export function renderConnections(container, state, app, options = {}) {
       <div class="section-head"><h2>Provider Roadmap</h2><span>แนะนำทำทีละ Provider</span></div>
       <div class="list">
         ${step('1', 'Strava', 'Setup Wizard พร้อมใช้งานสำหรับ OAuth และ Activity Sync')}
-        ${step('2', 'Apple Health', en ? 'Use the Shortcuts bridge now, or the iOS Companion when Xcode is available' : 'ใช้ Shortcuts Bridge ได้ทันที หรือใช้ iOS Companion เมื่อมี Xcode')}
+        ${step('2', 'Apple Health', en ? 'Use Health Auto Export REST API now, or the iOS Companion when Xcode is available' : 'ใช้ Health Auto Export REST API ได้ทันที หรือใช้ iOS Companion เมื่อมี Xcode')}
         ${step('3', 'Google Health / Fitbit', en ? 'Create a Google Cloud OAuth client, then sync workouts, sleep, RHR, HRV, steps and body metrics' : 'สร้าง Google Cloud OAuth client แล้ว Sync Workout, Sleep, RHR, HRV, Steps และ Body metrics')}
         ${step('4', 'Garmin', 'สมัคร Garmin Connect Developer Program และขอ Health + Activity API access')}
         ${step('5', 'Suunto', 'สมัคร Suunto Partner Program และเปิด Workout/FIT adapter')}
       </div>
     </section>
-    <div class="callout">${en ? 'Apple Health uses a native HealthKit bridge. Google Health/Fitbit, Garmin, Suunto and Strava use an OAuth backend so client secrets and refresh tokens never live in the browser.' : 'Apple Health ใช้ Shortcuts Bridge หรือ Native HealthKit ส่วน Google Health/Fitbit, Garmin, Suunto และ Strava ต้องผ่าน OAuth backend เพราะ Client Secret และ refresh token ไม่ควรอยู่ใน browser'}</div>`;
+    <div class="callout">${en ? 'Apple Health uses Health Auto Export REST API or a native HealthKit bridge. Google Health/Fitbit, Garmin, Suunto and Strava use an OAuth backend so client secrets and refresh tokens never live in the browser.' : 'Apple Health ใช้ Health Auto Export REST API หรือ Native HealthKit ส่วน Google Health/Fitbit, Garmin, Suunto และ Strava ต้องผ่าน OAuth backend เพราะ Client Secret และ refresh token ไม่ควรอยู่ใน browser'}</div>`;
 
   bindActions(container, state, app, appleBridge);
   bindSyncCenterActions(container, app);
@@ -224,7 +224,7 @@ function providerCard(provider, info, syncInfo, language) {
       ${provider === 'apple_health'
         ? info.connected
           ? `<button class="button primary" data-apple-sync>Sync Apple Health</button><a class="button secondary" href="#/apple-health-shortcut">${en ? 'Manage' : 'จัดการ'}</a>`
-          : `<a class="button primary" href="#/apple-health-shortcut">${en ? 'Set up Apple Health Shortcut' : 'ตั้งค่า Apple Health Shortcut'}</a>`
+          : `<a class="button primary" href="#/apple-health-shortcut">${en ? 'Set up Apple Health' : 'ตั้งค่า Apple Health'}</a>`
         : `<button class="button primary" data-connect-provider="${provider}">เชื่อมต่อ</button><button class="button secondary" data-sync-provider="${provider}" ${info.connected ? '' : 'disabled'}>Sync</button><button class="button danger" data-disconnect-provider="${provider}" ${info.connected ? '' : 'disabled'}>ยกเลิก</button>`}
     </div>
   </article>`;

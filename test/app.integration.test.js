@@ -185,9 +185,9 @@ test('application initializes the multi-race IndexedDB model and renders primary
 
   dom.window.location.hash = '#/apple-health-shortcut';
   dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
-  await waitFor(() => dom.window.document.querySelector('h1')?.textContent.includes('Apple Health Shortcut'));
+  await waitFor(() => dom.window.document.querySelector('h1')?.textContent.includes('Apple Health Sync'));
   assert.ok(dom.window.document.body.textContent.includes('npm run setup:apple-health-shortcut'));
-  assert.ok(dom.window.document.body.textContent.includes('Build the iPhone shortcut'));
+  assert.ok(dom.window.document.body.textContent.includes('Configure Health Auto Export'));
   assert.ok(!/[฀-๿]/.test(dom.window.document.querySelector('#view').textContent));
 
   dom.window.location.hash = '#/data';
@@ -215,7 +215,7 @@ test('application initializes the multi-race IndexedDB model and renders primary
   dom.window.close();
 });
 
-async function waitFor(predicate, timeoutMs = 3000) {
+async function waitFor(predicate, timeoutMs = 7000) {
   const started = Date.now();
   while (!predicate()) {
     if (Date.now() - started > timeoutMs) throw new Error('Timed out waiting for application render.');

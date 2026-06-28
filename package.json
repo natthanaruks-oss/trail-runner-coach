@@ -1,9 +1,9 @@
 {
   "name": "trail-runner-coach",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "private": true,
   "type": "module",
-  "description": "Mobile-first local-first bilingual trail coach with preserved wearable sync and Apple Health insights, visible score impact, automatic bridge pull and Shortcuts diagnostics",
+  "description": "Mobile-first trail coach with Strava-safe Apple Health insights and Health Auto Export REST API ingestion",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",
@@ -13,7 +13,8 @@
     "setup:strava": "node scripts/setup-strava.mjs",
     "setup:backup": "node scripts/setup-cloud-backup.mjs",
     "setup:google-health": "node scripts/setup-google-health.mjs",
-    "setup:apple-health-shortcut": "node scripts/setup-apple-health-shortcut.mjs"
+    "setup:apple-health-shortcut": "node scripts/setup-apple-health-shortcut.mjs",
+    "deploy:apple-health-worker": "node scripts/deploy-apple-health-worker.mjs"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.2.5",

@@ -103,3 +103,50 @@ test('Apple Health Shortcut Worker rejects missing or wrong bearer token', async
   const body = await response.json();
   assert.equal(body.code, 'unauthorized');
 });
+
+test('Apple Health Worker accepts Health Auto Export JSON v2 metrics and preserves Shortcut compatibility', async () => {
+  const bindings = env();
+  const payload = {
+    data: {
+      metrics: [
+        { name: 'step_count', units: 'count', data: [
+          { qty: 5000, date: '2026-06-27 10:00:00 +0700' },
+          { qty: 3240, date: '2026-06-27 18:00:00 +0700' }
+        ] },
+        { name: 'active_energy', units: 'kcal', data: [{ qty: 780, date: '2026-06-27 23:00:00 +0700' }] },
+        { name: 'apple_exercise_time', units: 'min', data: [{ qty: 65, date: '2026-06-27 23:00:00 +0700' }] },
+        { name: 'walking_running_distance', units: 'km', data: [{ qty: 9.4, date: '2026-06-27 23:00:00 +0700' }] },
+        { name: 'resting_heart_rate', units: 'bpm', data: [{ qty: 54, date: '2026-06-27 07:00:00 +0700' }] },
+        { name: 'heart_rate_variability_sdnn', units: 'ms', data: [{ qty: 48, date: '2026-06-27 07:10:00 +0700' }] },
+        { name: 'sleep_analysis', units: 'hr', data: [{
+          date: '2026-06-27', totalSleep: 7.2, asleep: 7.2,
+          sleepStart: '2026-06-26 23:10:00 +0700', sleepEnd: '2026-06-27 06:22:00 +0700'
+        }] },
+        { name: 'weight_&_body_mass', units: 'kg', data: [{ qty: 88.9, date: '2026-06-27 06:30:00 +0700' }] },
+        { name: 'body_fat_percentage', units: '%', data: [{ qty: 27.5, date: '2026-06-27 06:31:00 +0700' }] }
+      ]
+    }
+  };
+
+  let response = await worker.fetch(request('/v1/import', { method: 'POST', body: payload }), bindings);
+  assert.equal(response.status, 201);
+  const imported = await response.json();
+  assert.equal(imported.transport, 'health_auto_export');
+  assert.equal(imported.counts.dailyMetrics, 1);
+  assert.equal(imported.counts.bodyComposition, 1);
+
+  response = await worker.fetch(request('/v1/sync?days=7'), bindings);
+  const result = await response.json();
+  assert.equal(result.transport, 'health_auto_export');
+  assert.equal(result.ingestionFormat, 'health_auto_export_json_v2');
+  assert.equal(result.dailyMetrics[0].steps, 8240);
+  assert.equal(result.dailyMetrics[0].sleepHours, 7.2);
+  assert.equal(result.dailyMetrics[0].restingHr, 54);
+  assert.equal(result.dailyMetrics[0].hrvMs, 48);
+  assert.equal(result.dailyMetrics[0].activeEnergyKcal, 780);
+  assert.equal(result.dailyMetrics[0].exerciseMinutes, 65);
+  assert.equal(result.dailyMetrics[0].walkingRunningDistanceKm, 9.4);
+  assert.equal(result.bodyComposition[0].weightKg, 88.9);
+  assert.equal(result.bodyComposition[0].percentBodyFat, 27.5);
+  assert.equal(result.activities.length, 0);
+});

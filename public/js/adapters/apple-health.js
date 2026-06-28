@@ -46,7 +46,7 @@ export function requestAppleHealthSync({ days = 90, includeRoutes = false } = {}
 export async function requestAppleHealthPayload(settings, { days = 90, includeRoutes = false } = {}) {
   if (isAppleHealthBridgeAvailable()) return requestAppleHealthSync({ days, includeRoutes });
   if (isAppleHealthShortcutConfigured(settings)) return fetchAppleHealthShortcutPayload(settings, { days });
-  const error = new Error('Apple Health ยังไม่ได้เชื่อมต่อ: ตั้งค่า Shortcuts Bridge หรือเปิดผ่าน iOS Companion');
+  const error = new Error('Apple Health ยังไม่ได้เชื่อมต่อ: ตั้งค่า Health Auto Export Bridge หรือเปิดผ่าน iOS Companion');
   error.code = 'not_connected';
   error.status = 409;
   throw error;
@@ -54,7 +54,7 @@ export async function requestAppleHealthPayload(settings, { days = 90, includeRo
 
 export async function fetchAppleHealthShortcutStatus(settings) {
   const config = getAppleHealthShortcutConfig(settings);
-  if (!config.baseUrl) throw new Error('ยังไม่ได้ตั้งค่า Apple Health Shortcut Worker URL');
+  if (!config.baseUrl) throw new Error('ยังไม่ได้ตั้งค่า Apple Health Worker URL');
   const response = await fetch(`${config.baseUrl}/setup/status`, { cache: 'no-store' });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw createShortcutError(payload.message || `ตรวจ Worker ไม่สำเร็จ (${response.status})`, response, payload);
@@ -63,7 +63,7 @@ export async function fetchAppleHealthShortcutStatus(settings) {
 
 export async function fetchAppleHealthShortcutPayload(settings, { days = 90 } = {}) {
   const config = getAppleHealthShortcutConfig(settings);
-  if (!config.baseUrl || config.accessToken.length < 32) throw new Error('Apple Health Shortcuts Bridge ยังตั้งค่าไม่ครบ');
+  if (!config.baseUrl || config.accessToken.length < 32) throw new Error('Apple Health API Bridge ยังตั้งค่าไม่ครบ');
   const response = await fetch(`${config.baseUrl}/v1/sync?days=${Math.max(1, Math.min(365, Number(days) || 90))}`, {
     headers: { Authorization: `Bearer ${config.accessToken}` },
     cache: 'no-store'
@@ -75,7 +75,7 @@ export async function fetchAppleHealthShortcutPayload(settings, { days = 90 } = 
 
 export async function clearAppleHealthShortcutData(settings) {
   const config = getAppleHealthShortcutConfig(settings);
-  if (!config.baseUrl || config.accessToken.length < 32) throw new Error('Apple Health Shortcuts Bridge ยังตั้งค่าไม่ครบ');
+  if (!config.baseUrl || config.accessToken.length < 32) throw new Error('Apple Health API Bridge ยังตั้งค่าไม่ครบ');
   const response = await fetch(`${config.baseUrl}/v1/data`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${config.accessToken}` }

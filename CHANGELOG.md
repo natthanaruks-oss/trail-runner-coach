@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5.0 — Health Auto Export REST API
+
+- Replaced the long Apple Shortcut workflow with Health Auto Export REST API as the recommended Apple Health transport.
+- Added Health Auto Export JSON v2 auto-detection and normalization for steps, active energy, exercise time, walking/running distance, sleep, resting heart rate, HRV, weight, body fat, lean mass and height.
+- Preserved the existing Shortcut payload format as a manual fallback.
+- Increased the safe Apple Health import body limit to 2 MB and added clearer payload guidance.
+- Added a guarded Worker upgrade command that preserves the existing Bridge Token, encryption key, KV binding and encrypted data.
+- Updated the Apple Health setup screen with exact Health Auto Export REST API settings.
+- Kept Strava as the workout source of truth; Health Auto Export Workouts remain disabled by design.
+- Bumped package, app and PWA cache versions to 2.5.0.
+
 ## 2.4.0 — Apple Health Insights & Score Impact
 
 - Added a visible Apple Health snapshot to Today with Steps, Active Energy, Exercise Minutes, Walking/Running Distance, Sleep, Resting HR and HRV.
