@@ -6,6 +6,15 @@ const BRIDGE_HANDLER = 'trailRunnerHealthKit';
 const DEFAULT_TIMEOUT_MS = 120000;
 const SHORTCUT_PROVIDER = 'apple_health_shortcut';
 
+function normalizeAppleHealthDate(value) {
+  const text = String(value || '').trim();
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return text || null;
+  const year = Number(match[1]);
+  const normalizedYear = year >= 2400 && year <= 2999 ? year - 543 : year;
+  return `${String(normalizedYear).padStart(4, '0')}-${match[2]}-${match[3]}`;
+}
+
 export function isAppleHealthBridgeAvailable() {
   return Boolean(globalThis.window?.webkit?.messageHandlers?.[BRIDGE_HANDLER]?.postMessage);
 }
@@ -167,7 +176,7 @@ export function normalizeAppleHealthPayload(payload, settings = {}) {
   const maxHrReference = Number(settings?.athlete?.maxHr) || null;
 
   const checkins = (payload.dailyMetrics || []).map(metric => ({
-    date: metric.date,
+    date: normalizeAppleHealthDate(metric.date),
     source: 'apple_health',
     sources: ['apple_health'],
     sleepHours: numberOrNull(metric.sleepHours),
@@ -192,7 +201,7 @@ export function normalizeAppleHealthPayload(payload, settings = {}) {
     return {
       id: stableRecordId(externalId),
       externalId,
-      date: activity.date,
+      date: normalizeAppleHealthDate(activity.date),
       startTime: activity.startTime || null,
       endTime: activity.endTime || null,
       name: activity.name || activity.type || 'Apple Health Workout',
@@ -217,7 +226,7 @@ export function normalizeAppleHealthPayload(payload, settings = {}) {
 
   const bodyComposition = (payload.bodyComposition || []).map(record => ({
     id: record.id || stableRecordId(`apple-health-body:${record.date}:${record.type || 'summary'}`),
-    date: record.date,
+    date: normalizeAppleHealthDate(record.date),
     measuredAt: record.measuredAt || null,
     weightKg: numberOrNull(record.weightKg),
     percentBodyFat: numberOrNull(record.percentBodyFat),

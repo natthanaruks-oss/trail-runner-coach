@@ -82,11 +82,11 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '2.5.1') throw new Error(`Expected package version 2.5.1, received ${packageJson.version}`);
+if (packageJson.version !== '2.5.2') throw new Error(`Expected package version 2.5.2, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v2.5.1')) throw new Error('Service-worker cache version was not bumped to 2.5.1');
+if (!serviceWorker.includes('trail-runner-coach-v2.5.2')) throw new Error('Service-worker cache version was not bumped to 2.5.2');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '2.5.1'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '2.5.2'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const dedupEngine = await readFile(resolve(root, 'public/js/core/activity-dedup.js'), 'utf8');
 if (!dedupEngine.includes('scoreActivityMatch') || !dedupEngine.includes('externalRefs')) throw new Error('Activity deduplication engine is incomplete');
 const activityImport = await readFile(resolve(root, 'public/js/adapters/activity-import.js'), 'utf8');

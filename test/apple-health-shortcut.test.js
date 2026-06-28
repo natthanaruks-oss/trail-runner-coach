@@ -150,3 +150,38 @@ test('Apple Health Worker accepts Health Auto Export JSON v2 metrics and preserv
   assert.equal(result.bodyComposition[0].percentBodyFat, 27.5);
   assert.equal(result.activities.length, 0);
 });
+
+test('Health Auto Export Buddhist Era dates are normalized to Gregorian dates', async () => {
+  const bindings = env();
+  const payload = {
+    data: {
+      metrics: [
+        { name: 'step_count', units: 'count', data: [{ qty: 7121, date: '2569-06-22 23:59:00 +0700' }] },
+        { name: 'active_energy', units: 'kcal', data: [{ qty: 314.05, date: '2569-06-22 23:59:00 +0700' }] },
+        { name: 'sleep_analysis', units: 'hr', data: [{ date: '2569-06-22', totalSleep: 6.35 }] }
+      ]
+    }
+  };
+
+  let response = await worker.fetch(request('/v1/import', { method: 'POST', body: payload }), bindings);
+  assert.equal(response.status, 201);
+  response = await worker.fetch(request('/v1/sync?days=365'), bindings);
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.dailyMetrics.length, 1);
+  assert.equal(result.dailyMetrics[0].date, '2026-06-22');
+  assert.equal(result.dailyMetrics[0].steps, 7121);
+  assert.equal(result.dailyMetrics[0].sleepHours, 6.35);
+});
+
+test('Frontend Apple Health adapter defensively normalizes Buddhist Era dates', () => {
+  const normalized = normalizeAppleHealthPayload({
+    source: 'apple_health',
+    exportedAt: '2026-06-28T06:24:22.138Z',
+    dailyMetrics: [{ date: '2569-06-27', steps: 2364 }],
+    bodyComposition: [{ date: '2569-06-27', weightKg: 88.9 }],
+    activities: []
+  });
+  assert.equal(normalized.checkins[0].date, '2026-06-27');
+  assert.equal(normalized.bodyComposition[0].date, '2026-06-27');
+});

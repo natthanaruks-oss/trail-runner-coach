@@ -1,5 +1,5 @@
 export const APP_NAME = 'Trail Runner Coach';
-export const APP_VERSION = '2.5.1';
+export const APP_VERSION = '2.5.2';
 export const DB_NAME = 'trail_runner_coach';
 export const DB_VERSION = 4;
 export const LEGACY_STORAGE_KEYS = Object.freeze(['rtc70_v2', 'trail_runner_coach_v1']);

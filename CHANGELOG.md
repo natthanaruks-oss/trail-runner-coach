@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.5.2 — Buddhist Era Date Normalization
+
+- Fixed Health Auto Export records being stored with Thai Buddhist Era years such as `2569-06-27` instead of Gregorian `2026-06-27`.
+- Added Worker-side conversion of Buddhist Era years to Gregorian years for new imports and previously encrypted stored records.
+- Added a frontend defensive conversion so older Worker responses cannot create future-dated browser records.
+- Preserved the existing Apple Health KV, Bridge Token, encryption key, Strava Worker and IndexedDB schema.
+- Bumped package, application and PWA cache versions to 2.5.2; Apple Health Worker service version is 1.1.1.
+- Repository verification, all 68 automated tests and Cloudflare dry-run passed.
+
 ## 2.5.0 — Health Auto Export REST API
 
 - Replaced the long Apple Shortcut workflow with Health Auto Export REST API as the recommended Apple Health transport.

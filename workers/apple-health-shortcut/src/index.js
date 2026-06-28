@@ -10,12 +10,12 @@ export default {
       const url = new URL(request.url);
       let response;
       if (url.pathname === '/' || url.pathname === '/health') {
-        response = json({ ok: true, service: 'trail-runner-coach-apple-health-shortcut', version: '1.1.0' });
+        response = json({ ok: true, service: 'trail-runner-coach-apple-health-shortcut', version: '1.1.1' });
       } else if (url.pathname === '/setup/status' && request.method === 'GET') {
         response = json({
           ok: true,
           service: 'trail-runner-coach-apple-health-shortcut',
-          version: '1.1.0',
+          version: '1.1.1',
           ingestionModes: ['health_auto_export', 'shortcuts_bridge'],
           appOrigin: Boolean(env.APP_ORIGIN),
           kv: Boolean(env.APPLE_HEALTH_DATA),
@@ -230,7 +230,7 @@ function isMetric(name, aliases) {
 }
 
 function healthDate(value) {
-  const text = String(value || '').trim();
+  const text = normalizeCalendarYearText(value);
   const match = text.match(/^(\d{4}-\d{2}-\d{2})/);
   if (match) return validDate(match[1]);
   const parsed = new Date(text);
@@ -421,9 +421,25 @@ function mergeBy(existing = [], incoming = [], keyFn) {
 
 async function readProfile(env) {
   const encrypted = await env.APPLE_HEALTH_DATA.get('profile:default');
-  if (!encrypted) return { schemaVersion: 1, updatedAt: null, transport: null, ingestionFormat: null, dailyMetrics: [], bodyComposition: [], activities: [] };
-  try { return await decryptJson(encrypted, env.APPLE_HEALTH_ENCRYPTION_KEY); }
+  if (!encrypted) return emptyProfile();
+  try { return normalizeStoredProfile(await decryptJson(encrypted, env.APPLE_HEALTH_ENCRYPTION_KEY)); }
   catch { throw httpError(500, 'decrypt_failed', 'อ่านข้อมูล Apple Health ไม่สำเร็จ'); }
+}
+
+function emptyProfile() {
+  return { schemaVersion: 1, updatedAt: null, transport: null, ingestionFormat: null, dailyMetrics: [], bodyComposition: [], activities: [] };
+}
+
+function normalizeStoredProfile(profile = {}) {
+  return {
+    schemaVersion: 1,
+    updatedAt: validIso(profile.updatedAt) || null,
+    transport: profile.transport || null,
+    ingestionFormat: profile.ingestionFormat || null,
+    dailyMetrics: mergeBy([], (profile.dailyMetrics || []).map(normalizeDaily).filter(Boolean), row => row.date).slice(-MAX_DAILY_RECORDS),
+    bodyComposition: mergeBy([], (profile.bodyComposition || []).map(normalizeBody).filter(Boolean), row => `${row.date}:${row.measuredAt || row.id || ''}`).slice(-MAX_BODY_RECORDS),
+    activities: mergeBy([], (profile.activities || []).map(normalizeActivity).filter(Boolean), row => row.externalId).slice(-MAX_ACTIVITY_RECORDS)
+  };
 }
 
 async function writeProfile(env, value) {
@@ -488,15 +504,26 @@ function bounded(value, min, max) {
   if (!Number.isFinite(number) || number < min || number > max) return null;
   return number;
 }
-function validDate(value) {
+function normalizeCalendarYearText(value) {
   const text = String(value || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+  return text.replace(/^(\d{4})(?=-\d{2}-\d{2})/, (_, yearText) => {
+    const year = Number(yearText);
+    return year >= 2400 && year <= 2999 ? String(year - 543).padStart(4, '0') : yearText;
+  });
+}
+function validDate(value) {
+  const text = normalizeCalendarYearText(value);
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const [, yearText, monthText, dayText] = match;
   const date = new Date(`${text}T00:00:00Z`);
-  return Number.isNaN(date.getTime()) ? null : text;
+  if (Number.isNaN(date.getTime())) return null;
+  if (date.getUTCFullYear() !== Number(yearText) || date.getUTCMonth() + 1 !== Number(monthText) || date.getUTCDate() !== Number(dayText)) return null;
+  return text;
 }
 function validIso(value) {
   if (!value) return null;
-  const date = new Date(value);
+  const date = new Date(normalizeCalendarYearText(value));
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 function cleanText(value, max) {
