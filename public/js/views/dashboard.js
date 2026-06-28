@@ -17,6 +17,7 @@ export function renderDashboard(container, state, app) {
   const countdown = selectRaceCountdown(state);
   const week = selectWeekSummary(state, today.plan.weekSessions);
   const session = today.plan.todaySession;
+  const todayWorkout = session ? state.workouts.find(item => item.planSessionId === session.id) || null : null;
   const nutrition = foodTotals(state, today.dateKey);
   const nutritionPlan = nutritionTarget(state, today.dateKey);
   const nutritionBalance = energyBalanceForDate(state, today.dateKey);
@@ -32,7 +33,7 @@ export function renderDashboard(container, state, app) {
   container.innerHTML = `
     ${pageHeader(en ? 'Today' : 'วันนี้', formatThaiDate(today.dateKey), today.race ? `${escapeHtml(today.race.name)} · ${escapeHtml(raceSummary(today.race))}` : (en ? 'Choose a target race to start planning' : 'เลือกสนามเป้าหมายเพื่อเริ่มวางแผน'))}
 
-    ${renderReadinessHero({ today, session, unified, trailCoach, en, app })}
+    ${renderReadinessHero({ today, session, todayWorkout, unified, trailCoach, en, app })}
 
     <section class="section unified-pillars-section">
       <div class="section-head"><div><h2>${en ? 'Your training state' : 'สถานะการฝึกวันนี้'}</h2><small>${en ? 'One view of recovery, load and energy' : 'รวม Recovery, Training Load และ Energy ไว้ในภาพเดียว'}</small></div><a href="#/health">${en ? 'View analysis' : 'ดูการวิเคราะห์'}</a></div>
@@ -140,13 +141,17 @@ export function renderDashboard(container, state, app) {
   scheduleDashboardAutoPull(container, state, app, health, en);
 }
 
-function renderReadinessHero({ today, session, unified, trailCoach, en, app }) {
+function renderReadinessHero({ today, session, todayWorkout, unified, trailCoach, en, app }) {
   const score = unified.readiness.score;
   const status = unified.readiness.status;
   const label = readinessLabel(unified.readiness, en);
   const coachAction = trailPrescriptionText(trailCoach.prescription, en);
   const plannedTitle = session ? (app.field(session, 'title') || session.t) : (en ? 'No planned session' : 'ยังไม่มีแผนซ้อมวันนี้');
   const workoutMeta = session ? `${escapeHtml(session.t || 'Rest')}${session.km ? ` · ${session.km} km · +${session.vert || 0} m` : ''}` : '';
+  const actualMeta = todayWorkout && ['completed','partial','exceeded','modified'].includes(todayWorkout.status)
+    ? `${en ? 'Actual' : 'จริง'} ${todayWorkout.actualDistanceKm != null ? `${formatNumber(todayWorkout.actualDistanceKm,1)} km` : '—'}${todayWorkout.durationMin != null ? ` · ${formatNumber(todayWorkout.durationMin)} ${en ? 'min' : 'นาที'}` : ''}${todayWorkout.isSplitSession ? ` · ${todayWorkout.activityCount || todayWorkout.actualActivityIds?.length || 2} ${en ? 'sessions' : 'รอบ'}` : ''}`
+    : todayWorkout?.status === 'needs_review' ? (todayWorkout.isSplitSession ? (en ? 'Split-session match needs review' : 'พบหลายกิจกรรมรอยืนยันกับแผน') : (en ? 'Workout match needs review' : 'มีกิจกรรมรอยืนยันกับแผน')) : '';
+  const workoutActionLabel = todayWorkout && ['completed','partial','exceeded','modified'].includes(todayWorkout.status) ? (en ? 'View actual result' : 'ดูผลซ้อมจริง') : (en ? 'Record workout' : 'บันทึกผลจริง');
   return `<section class="card unified-readiness-hero tone-${escapeHtml(status || 'unknown')}">
     <div class="unified-hero-top">
       <div>
@@ -160,6 +165,7 @@ function renderReadinessHero({ today, session, unified, trailCoach, en, app }) {
       <span>${en ? 'Confidence' : 'ความมั่นใจ'} ${unified.readiness.confidence}%</span>
       <span>${escapeHtml(plannedTitle)}</span>
       ${workoutMeta ? `<span>${workoutMeta}</span>` : ''}
+      ${actualMeta ? `<span class="${todayWorkout?.status === 'needs_review' ? 'warning-text' : ''}">${escapeHtml(actualMeta)}</span>` : ''}
     </div>
     <div class="coach-hero-message">
       <strong>${escapeHtml(coachAction.title)}</strong>
@@ -167,7 +173,7 @@ function renderReadinessHero({ today, session, unified, trailCoach, en, app }) {
     </div>
     <div class="button-row unified-hero-actions">
       <button class="button primary" data-action="checkin">${today.checkin ? (en ? 'Edit check-in' : 'แก้ไข Check-in') : (en ? 'Check in' : 'Check-in ก่อนซ้อม')}</button>
-      ${session ? `<button class="button secondary" data-action="record-workout">${en ? 'Record workout' : 'บันทึกผลจริง'}</button>` : ''}
+      ${session ? `<button class="button secondary" data-action="record-workout">${workoutActionLabel}</button>` : ''}
       <a class="button ghost" href="#/coach">${en ? 'Open Trail Coach' : 'เปิด Trail Coach'}</a>
     </div>
   </section>`;

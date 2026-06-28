@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.8.2 — Multi-session plan reconciliation
+
+- Combine up to four compatible same-day activities into one planned workout.
+- Sum actual distance, duration, elevation, energy and training load.
+- Use duration-weighted average HR/RPE and highest max HR.
+- Separate total volume completion from continuous-endurance specificity.
+- Prevent cross-type bundles and double assignment of an activity.
+- Show linked activity count and split-session details in Training Plan and workout review.
+
+## 2.8.1 — Auto Readiness & Plan Reconciliation
+
+- Uses synced Sleep, Resting HR, HRV and daily activity data automatically in Daily Readiness.
+- Replaces duplicate manual recovery entry with a short human-only fatigue, soreness, stress and Pain Safety check-in.
+- Adds one-tap sync and a conservative readiness preview with freshness and data-confidence controls.
+- Matches synced workouts to planned sessions using date, type, duration, distance and elevation.
+- Adds Planned vs Actual results and Completed, Partial, Exceeded and Needs Review states.
+- Protects manual decisions and avoids creating duplicate activities for linked synced workouts.
+- Keeps all Workers, secrets, KV bindings and IndexedDB version unchanged.
+- Repository verification, 91 automated tests and Cloudflare dry-run passed.
+
 ## 2.8.0 — Trail Coach Intelligence
 
 - Added a provider-neutral Trail Coach detail experience.

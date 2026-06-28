@@ -62,7 +62,7 @@ export function selectWeekSummary(state, weekSessions) {
   const totals = plannedTotals(weekSessions);
   const sessionIds = new Set(weekSessions.map(session => session.id));
   const workouts = state.workouts.filter(workout => sessionIds.has(workout.planSessionId));
-  const completed = workouts.filter(workout => ['completed', 'modified'].includes(workout.status));
+  const completed = workouts.filter(workout => ['completed', 'partial', 'exceeded', 'modified'].includes(workout.status));
   const actualDistanceKm = completed.reduce((sum, item) => sum + (Number(item.actualDistanceKm) || 0), 0);
   const actualElevationGainM = completed.reduce((sum, item) => sum + (Number(item.actualElevationGainM) || 0), 0);
   return {

@@ -106,7 +106,7 @@ function buildPlanSummary(state, startDate, endDate, footActivities) {
   const trainable = sessions.filter(session => !['Rest', 'Rehab'].includes(session.t));
   const sessionIds = new Set(sessions.map(session => session.id));
   const workouts = state.workouts.filter(workout => sessionIds.has(workout.planSessionId));
-  const completed = workouts.filter(workout => ['completed', 'modified'].includes(workout.status));
+  const completed = workouts.filter(workout => ['completed', 'partial', 'exceeded', 'modified'].includes(workout.status));
   const skipped = workouts.filter(workout => workout.status === 'skipped');
   const plannedDistanceKm = sum(trainable.map(session => number(session.km)));
   const plannedElevationGainM = sum(trainable.map(session => number(session.vert)));

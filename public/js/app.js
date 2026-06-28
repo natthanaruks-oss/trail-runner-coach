@@ -4,6 +4,7 @@ import { createId } from './core/id.js';
 import { localDateKey, nowIso } from './core/date.js';
 import { migrateLegacyLocalStorage } from './adapters/legacy.js';
 import { reconcileStoredActivities } from './adapters/activity-import.js';
+import { reconcilePlanWorkouts } from './core/plan-reconciliation.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderPlan } from './views/plan.js';
 import { renderCheckin } from './views/checkin.js';
@@ -91,6 +92,7 @@ async function start() {
     await migrateLegacyLocalStorage(store.getState().settings);
     await store.refreshAll();
     await reconcileStoredActivities(store);
+    await reconcilePlanWorkouts(store, { reason: 'app_start' });
     installAppleHealthReceiver();
     if (window.history && 'scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
     bindGlobalEvents();
@@ -149,9 +151,10 @@ function render(options = {}) {
 function bindGlobalEvents() {
   window.addEventListener('hashchange', render);
   window.addEventListener('trail-runner-coach:sync-state', () => {
+    schedulePlanReconciliation();
     const route = currentRoute();
     if (route === 'connections') refreshConnectionsSyncUi(view, store.getState(), app);
-    else if (route === 'connections-home' || route === 'more') render();
+    else if (route === 'connections-home' || route === 'more' || route === 'plan' || route === 'checkin') render();
   });
   window.addEventListener('trail-runner-coach:cloud-backup-state', () => {
     if (currentRoute() === 'cloud-backup') render();
@@ -206,44 +209,74 @@ function openWorkoutModal(session) {
   if (!session) return;
   const state = store.getState();
   const existing = state.workouts.find(item => item.planSessionId === session.id) || {};
-  openModal('บันทึกผลการซ้อม', `
-    <div class="callout" style="margin-bottom:13px"><strong>${escapeHtml(localizedField(session, getLanguage(state.settings), 'title') || session.t)}</strong><br>${escapeHtml(session.date)} · แผน ${session.km || 0} km · +${session.vert || 0} m</div>
+  const language = getLanguage(state.settings);
+  const en = language === 'en';
+  const autoMatched = existing.source === 'auto_reconciliation' || existing.matchStatus;
+  const linkedIds = existing.actualActivityIds || (existing.actualActivityId ? [existing.actualActivityId] : []);
+  const linkedActivities = linkedIds.map(id => state.activities.find(item => item.id === id)).filter(Boolean);
+  const splitLabel = existing.isSplitSession
+    ? (en ? `${linkedIds.length} activities combined as one planned session` : `รวมกิจกรรม ${linkedIds.length} รอบเข้ากับแผนเดียว`)
+    : '';
+  const matchCallout = autoMatched
+    ? `<div class="callout ${existing.status === 'needs_review' ? 'warning' : ''}" style="margin-bottom:13px"><strong>${existing.status === 'needs_review' ? (en ? 'Possible workout match' : 'พบกิจกรรมที่น่าจะตรงกับแผน') : existing.isSplitSession ? (en ? 'Matched as a split session' : 'จับคู่เป็น Split Session') : (en ? 'Matched automatically' : 'จับคู่กับกิจกรรมจริงอัตโนมัติ')}</strong><br>${en ? 'Match confidence' : 'ความมั่นใจ'} ${existing.matchConfidence || 0}%${linkedIds.length ? ` · ${splitLabel || (en ? 'linked activity' : 'เชื่อมกับกิจกรรมจริงแล้ว')}` : ''}</div>`
+    : '';
+  const linkedActivityList = linkedActivities.length
+    ? `<div class="split-session-detail"><div class="card-title">${en ? 'Linked activities' : 'กิจกรรมที่นำมารวม'}</div>${linkedActivities.map((activity, index) => `<div class="split-session-row"><span>${index + 1}. ${escapeHtml(activity.name || activity.type || (en ? 'Activity' : 'กิจกรรม'))}</span><strong>${activity.distanceKm != null ? `${Number(activity.distanceKm).toFixed(1)} km` : '—'} · ${activity.durationMin != null ? `${Math.round(activity.durationMin)} ${en ? 'min' : 'นาที'}` : '—'}${activity.elevationGainM != null ? ` · +${Math.round(activity.elevationGainM)} m` : ''}</strong></div>`).join('')}${existing.isSplitSession && existing.continuousObjective ? `<div class="submetric warning-text">${en ? `Volume ${Math.round(existing.volumeCompletionPct || 0)}% · continuous endurance ${Math.round(existing.continuousCompletionPct || 0)}%` : `ปริมาณรวม ${Math.round(existing.volumeCompletionPct || 0)}% · ความต่อเนื่อง ${Math.round(existing.continuousCompletionPct || 0)}%`}</div>` : ''}</div>`
+    : '';
+  openModal(en ? 'Record workout result' : 'บันทึกผลการซ้อม', `
+    ${matchCallout}
+    ${linkedActivityList}
+    <div class="callout" style="margin-bottom:13px"><strong>${escapeHtml(localizedField(session, language, 'title') || session.t)}</strong><br>${escapeHtml(session.date)} · ${en ? 'Plan' : 'แผน'} ${session.km || 0} km · +${session.vert || 0} m</div>
     <form id="workout-form"><div class="form-grid">
-      <div class="field"><label>สถานะ</label><select name="status"><option value="completed" ${existing.status==='completed'?'selected':''}>ทำแล้ว</option><option value="modified" ${existing.status==='modified'?'selected':''}>ปรับลด/เปลี่ยน</option><option value="skipped" ${existing.status==='skipped'?'selected':''}>พัก/ข้าม</option></select></div>
-      <div class="field"><label>วันที่ทำจริง</label><input type="date" name="date" value="${escapeHtml(existing.date || session.date)}"></div>
-      ${fieldNumber({name:'actualDistanceKm',label:'ระยะจริง (km)',value:existing.actualDistanceKm??session.km??'',min:0,max:200,step:.1})}
+      <div class="field"><label>${en ? 'Status' : 'สถานะ'}</label><select name="status">
+        <option value="completed" ${existing.status==='completed'?'selected':''}>${en ? 'Completed' : 'ทำแล้ว'}</option>
+        <option value="partial" ${existing.status==='partial'?'selected':''}>${en ? 'Partially completed' : 'ทำบางส่วน'}</option>
+        <option value="exceeded" ${existing.status==='exceeded'?'selected':''}>${en ? 'Exceeded plan' : 'ทำเกินแผน'}</option>
+        <option value="modified" ${existing.status==='modified'?'selected':''}>${en ? 'Modified session' : 'ปรับลด/เปลี่ยน'}</option>
+        <option value="skipped" ${existing.status==='skipped'?'selected':''}>${en ? 'Skipped / rest' : 'พัก/ข้าม'}</option>
+        ${existing.status === 'needs_review' ? `<option value="planned">${en ? 'Not this workout' : 'ไม่ใช่กิจกรรมนี้'}</option>` : ''}
+      </select></div>
+      <div class="field"><label>${en ? 'Actual date' : 'วันที่ทำจริง'}</label><input type="date" name="date" value="${escapeHtml(existing.date || session.date)}"></div>
+      ${fieldNumber({name:'actualDistanceKm',label:en ? 'Actual distance (km)' : 'ระยะจริง (km)',value:existing.actualDistanceKm??session.km??'',min:0,max:200,step:.1})}
       ${fieldNumber({name:'actualElevationGainM',label:'Vertical gain (m)',value:existing.actualElevationGainM??session.vert??'',min:0,max:10000})}
       ${fieldNumber({name:'elevationLossM',label:'Vertical loss (m)',value:existing.elevationLossM??session.vert??'',min:0,max:10000})}
-      ${fieldNumber({name:'durationMin',label:'ระยะเวลา (นาที)',value:existing.durationMin??'',min:0,max:2000})}
+      ${fieldNumber({name:'durationMin',label:en ? 'Duration (minutes)' : 'ระยะเวลา (นาที)',value:existing.durationMin??'',min:0,max:2000})}
       ${fieldNumber({name:'rpe',label:'Session RPE 1–10',value:existing.rpe??'',min:1,max:10})}
       ${fieldNumber({name:'avgHr',label:'Average HR',value:existing.avgHr??'',min:30,max:230})}
-      <div class="field"><label>Terrain</label><select name="terrain"><option value="trail">Trail</option><option value="road">Road</option><option value="treadmill">Treadmill</option><option value="strength">Strength</option></select></div>
+      <div class="field"><label>Terrain</label><select name="terrain"><option value="trail" ${existing.terrain==='trail'?'selected':''}>Trail</option><option value="road" ${existing.terrain==='road'?'selected':''}>Road</option><option value="treadmill" ${existing.terrain==='treadmill'?'selected':''}>Treadmill</option><option value="strength" ${existing.terrain==='strength'?'selected':''}>Strength</option></select></div>
       <label class="check-row field"><input type="checkbox" name="isNight" ${session.t==='Night'||existing.isNight?'checked':''}><span>Night run</span></label>
-      <div class="field full"><label>หมายเหตุ</label><textarea name="note" rows="3">${escapeHtml(existing.note||'')}</textarea></div>
-    </div><button class="button primary full" style="margin-top:14px">บันทึก</button></form>`);
+      <div class="field full"><label>${en ? 'Note' : 'หมายเหตุ'}</label><textarea name="note" rows="3">${escapeHtml(existing.note||'')}</textarea></div>
+    </div><button class="button primary full" style="margin-top:14px">${en ? 'Save' : 'บันทึก'}</button></form>`);
 
   modalContent.querySelector('#workout-form').addEventListener('submit', async event => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const num = key => data.get(key) === '' ? null : Number(data.get(key));
+    const selectedStatus = data.get('status');
+    const rejectedAutoMatch = selectedStatus === 'planned';
     const workout = {
+      ...existing,
       planSessionId: session.id,
       date: data.get('date') || session.date,
-      status: data.get('status'),
-      actualDistanceKm: num('actualDistanceKm'),
-      actualElevationGainM: num('actualElevationGainM'),
-      elevationLossM: num('elevationLossM'),
-      durationMin: num('durationMin'),
-      rpe: num('rpe'),
-      avgHr: num('avgHr'),
+      status: rejectedAutoMatch ? 'planned' : selectedStatus,
+      actualDistanceKm: rejectedAutoMatch ? null : num('actualDistanceKm'),
+      actualElevationGainM: rejectedAutoMatch ? null : num('actualElevationGainM'),
+      elevationLossM: rejectedAutoMatch ? null : num('elevationLossM'),
+      durationMin: rejectedAutoMatch ? null : num('durationMin'),
+      rpe: rejectedAutoMatch ? null : num('rpe'),
+      avgHr: rejectedAutoMatch ? null : num('avgHr'),
       terrain: data.get('terrain'),
       isNight: data.has('isNight'),
       note: data.get('note') || '',
-      source: 'manual',
+      actualActivityId: rejectedAutoMatch ? null : existing.actualActivityId || null,
+      actualActivityIds: rejectedAutoMatch ? [] : existing.actualActivityIds || (existing.actualActivityId ? [existing.actualActivityId] : []),
+      matchStatus: rejectedAutoMatch ? 'rejected' : (autoMatched ? 'user_confirmed' : existing.matchStatus || null),
+      source: autoMatched ? 'manual_review' : 'manual',
       updatedAt: nowIso()
     };
     await store.upsertRecord(STORES.WORKOUTS, workout);
-    const shouldCreateActivity = ['completed','modified'].includes(workout.status) && ((workout.durationMin || 0) > 0 || (workout.actualDistanceKm || 0) > 0);
+    const completedStatuses = ['completed','partial','exceeded','modified'];
+    const shouldCreateActivity = !workout.actualActivityId && completedStatuses.includes(workout.status) && ((workout.durationMin || 0) > 0 || (workout.actualDistanceKm || 0) > 0);
     if (shouldCreateActivity) {
       const externalId = `plan:${session.id}`;
       const existingActivity = store.getState().activities.find(item => item.externalId === externalId);
@@ -252,7 +285,7 @@ function openWorkoutModal(session) {
         externalId,
         date: workout.date,
         startTime: null,
-        name: localizedField(session, getLanguage(state.settings), 'title') || session.t,
+        name: localizedField(session, language, 'title') || session.t,
         type: session.t,
         durationMin: workout.durationMin || estimateDuration(workout.actualDistanceKm ?? session.km, session.t),
         distanceKm: workout.actualDistanceKm ?? session.km ?? 0,
@@ -268,7 +301,7 @@ function openWorkoutModal(session) {
       });
     }
     closeModal();
-    toast('บันทึกผลการซ้อมแล้ว');
+    toast(en ? 'Workout result saved' : 'บันทึกผลการซ้อมแล้ว');
     render();
   });
 }
@@ -308,6 +341,17 @@ function toast(message) {
   toastElement.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastElement.classList.remove('show'), 2600);
+}
+
+let planReconciliationTimer;
+function schedulePlanReconciliation() {
+  clearTimeout(planReconciliationTimer);
+  planReconciliationTimer = setTimeout(() => {
+    reconcilePlanWorkouts(store, { reason: 'provider_sync' }).then(() => {
+      const route = currentRoute();
+      if (['today', 'plan', 'checkin'].includes(route)) render();
+    }).catch(() => {});
+  }, 180);
 }
 
 function registerServiceWorker() {

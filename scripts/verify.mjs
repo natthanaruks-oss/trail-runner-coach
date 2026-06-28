@@ -21,6 +21,8 @@ const required = [
   'public/js/core/unified-insights.js',
   'public/js/core/personal-trends.js',
   'public/js/core/trail-coach.js',
+  'public/js/core/auto-readiness.js',
+  'public/js/core/plan-reconciliation.js',
   'public/js/views/health.js',
   'public/js/views/coach.js',
   'public/js/data/food-catalog.js',
@@ -45,6 +47,7 @@ const required = [
   'docs/PROGRESS_DASHBOARD.md',
   'docs/PERSONAL_TRENDS_V2.7.md',
   'docs/TRAIL_COACH_INTELLIGENCE_V2.8.md',
+  'docs/AUTO_READINESS_PLAN_RECONCILIATION_V2.8.1.md',
   'scripts/setup-strava.mjs',
   'scripts/setup-google-health.mjs',
   'scripts/lib/google-health-setup.mjs',
@@ -89,11 +92,11 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '2.8.0') throw new Error(`Expected package version 2.8.0, received ${packageJson.version}`);
+if (packageJson.version !== '2.8.2') throw new Error(`Expected package version 2.8.2, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v2.8.0')) throw new Error('Service-worker cache version was not bumped to 2.8.0');
+if (!serviceWorker.includes('trail-runner-coach-v2.8.2')) throw new Error('Service-worker cache version was not bumped to 2.8.2');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '2.8.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '2.8.2'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const dedupEngine = await readFile(resolve(root, 'public/js/core/activity-dedup.js'), 'utf8');
 if (!dedupEngine.includes('scoreActivityMatch') || !dedupEngine.includes('externalRefs')) throw new Error('Activity deduplication engine is incomplete');
 const activityImport = await readFile(resolve(root, 'public/js/adapters/activity-import.js'), 'utf8');
@@ -125,6 +128,15 @@ if (!trailCoach.includes('buildTrailCoachIntelligence') || !trailCoach.includes(
 const coachView = await readFile(resolve(root, 'public/js/views/coach.js'), 'utf8');
 if (!coachView.includes('Trail Coach') || !coachView.includes('Six-week progression') || !coachView.includes('Race-readiness contributors')) throw new Error('Trail coach detail view is incomplete');
 if (!dashboardView.includes('Trail-specific readiness') || !dashboardView.includes('#/coach')) throw new Error('Dashboard does not expose Trail Coach progressive disclosure');
+
+const autoReadiness = await readFile(resolve(root, 'public/js/core/auto-readiness.js'), 'utf8');
+if (!autoReadiness.includes('buildAutoReadinessContext') || !autoReadiness.includes('buildReadinessDraft') || !autoReadiness.includes('syncReadinessAndPlan')) throw new Error('Automatic readiness integration is incomplete');
+const planReconciliation = await readFile(resolve(root, 'public/js/core/plan-reconciliation.js'), 'utf8');
+if (!planReconciliation.includes('scorePlanActivityMatch') || !planReconciliation.includes('reconcilePlanWorkouts') || !planReconciliation.includes('AUTO_MATCH_THRESHOLD') || !planReconciliation.includes('buildActivityBundles') || !planReconciliation.includes('isSplitSession') || !planReconciliation.includes('specificityPct') || !planReconciliation.includes('actualActivityIds')) throw new Error('Multi-session plan reconciliation engine is incomplete');
+const checkinView = await readFile(resolve(root, 'public/js/views/checkin.js'), 'utf8');
+if (!checkinView.includes('Automatic recovery data') || !checkinView.includes('data-readiness-sync') || checkinView.includes('แหล่งข้อมูล</label>')) throw new Error('Automatic readiness check-in UX is incomplete or exposes provider selection');
+const planView = await readFile(resolve(root, 'public/js/views/plan.js'), 'utf8');
+if (!planView.includes('Plan ↔ actual reconciliation') || !planView.includes('data-plan-reconcile') || !planView.includes('actualDistanceKm') || !planView.includes('split-session-summary') || !planView.includes('continuousCompletionPct')) throw new Error('Plan versus actual multi-session UX is incomplete');
 
 const appleAutoPull = await readFile(resolve(root, 'public/js/core/apple-health-auto-pull.js'), 'utf8');
 if (!appleAutoPull.includes('shouldAutoPullAppleHealth') || !appleAutoPull.includes('autoPullAppleHealth')) throw new Error('Apple Health automatic pull is incomplete');
