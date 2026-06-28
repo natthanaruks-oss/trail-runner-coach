@@ -19,6 +19,7 @@ const required = [
   'public/js/core/progress.js',
   'public/js/core/apple-health-auto-pull.js',
   'public/js/core/unified-insights.js',
+  'public/js/core/personal-trends.js',
   'public/js/views/health.js',
   'public/js/data/food-catalog.js',
   'public/js/data/training-library.js',
@@ -40,6 +41,7 @@ const required = [
   'docs/SYNC_LIFECYCLE.md',
   'docs/SCORE_CALIBRATION.md',
   'docs/PROGRESS_DASHBOARD.md',
+  'docs/PERSONAL_TRENDS_V2.7.md',
   'scripts/setup-strava.mjs',
   'scripts/setup-google-health.mjs',
   'scripts/lib/google-health-setup.mjs',
@@ -84,11 +86,11 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '2.6.0') throw new Error(`Expected package version 2.6.0, received ${packageJson.version}`);
+if (packageJson.version !== '2.7.0') throw new Error(`Expected package version 2.7.0, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v2.6.0')) throw new Error('Service-worker cache version was not bumped to 2.6.0');
+if (!serviceWorker.includes('trail-runner-coach-v2.7.0')) throw new Error('Service-worker cache version was not bumped to 2.7.0');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '2.6.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '2.7.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const dedupEngine = await readFile(resolve(root, 'public/js/core/activity-dedup.js'), 'utf8');
 if (!dedupEngine.includes('scoreActivityMatch') || !dedupEngine.includes('externalRefs')) throw new Error('Activity deduplication engine is incomplete');
 const activityImport = await readFile(resolve(root, 'public/js/adapters/activity-import.js'), 'utf8');
@@ -112,7 +114,9 @@ if (!dashboardView.includes('สถานะการฝึกวันนี้
 const unifiedInsights = await readFile(resolve(root, 'public/js/core/unified-insights.js'), 'utf8');
 if (!unifiedInsights.includes('buildUnifiedInsights') || !unifiedInsights.includes('buildLoadBalance') || !unifiedInsights.includes('buildEnergyScore')) throw new Error('Unified insight model is incomplete');
 const healthView = await readFile(resolve(root, 'public/js/views/health.js'), 'utf8');
-if (!healthView.includes('renderHealth') || !healthView.includes('Recovery signals') || !healthView.includes('Data & sync settings')) throw new Error('Unified health detail view is incomplete');
+if (!healthView.includes('renderHealth') || !healthView.includes('Recovery signals') || !healthView.includes('Fitness, fatigue & form') || !healthView.includes('Data & sync settings')) throw new Error('Personal trend health detail view is incomplete');
+const personalTrends = await readFile(resolve(root, 'public/js/core/personal-trends.js'), 'utf8');
+if (!personalTrends.includes('buildPersonalTrends') || !personalTrends.includes('buildSleepDebt') || !personalTrends.includes('buildFitnessFatigueForm')) throw new Error('Personal trends engine is incomplete');
 
 const appleAutoPull = await readFile(resolve(root, 'public/js/core/apple-health-auto-pull.js'), 'utf8');
 if (!appleAutoPull.includes('shouldAutoPullAppleHealth') || !appleAutoPull.includes('autoPullAppleHealth')) throw new Error('Apple Health automatic pull is incomplete');

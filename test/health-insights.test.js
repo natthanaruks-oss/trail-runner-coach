@@ -77,3 +77,46 @@ test('Apple Health insights fall back to the latest available day when today has
   assert.equal(insights.isCurrentDay, false);
   assert.equal(insights.metrics.steps, 8240);
 });
+
+test('Apple Health insights use the latest non-null value and date for each metric', () => {
+  const state = baseState();
+  state.checkins = [
+    {
+      date: '2026-06-27',
+      source: 'apple_health',
+      sources: ['apple_health'],
+      sleepHours: 5.58,
+      restingHr: 63,
+      hrvMs: 41,
+      steps: 2364,
+      activeEnergyKcal: 72,
+      walkingRunningDistanceKm: 1.52,
+      wearable: { transport: 'health_auto_export', importedAt: '2026-06-28T06:24:22.138Z' }
+    },
+    {
+      date: '2026-06-28',
+      source: 'apple_health',
+      sources: ['apple_health'],
+      sleepHours: null,
+      restingHr: null,
+      hrvMs: null,
+      steps: 352,
+      activeEnergyKcal: 7.564,
+      walkingRunningDistanceKm: 0.24655,
+      wearable: { transport: 'health_auto_export', importedAt: '2026-06-28T06:24:22.138Z' }
+    }
+  ];
+
+  const insights = selectAppleHealthInsights(state, '2026-06-28', 7);
+  assert.equal(insights.metrics.steps, 352);
+  assert.equal(insights.metricDates.steps, '2026-06-28');
+  assert.equal(insights.metrics.sleepHours, 5.58);
+  assert.equal(insights.metricDates.sleepHours, '2026-06-27');
+  assert.equal(insights.metrics.restingHr, 63);
+  assert.equal(insights.metricDates.restingHr, '2026-06-27');
+  assert.equal(insights.metrics.hrvMs, 41);
+  assert.equal(insights.metricDates.hrvMs, '2026-06-27');
+  assert.equal(insights.hasMixedMetricDates, true);
+  assert.equal(insights.metricDate, '2026-06-28');
+  assert.equal(insights.recoveryAvailable, 3);
+});

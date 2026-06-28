@@ -263,3 +263,13 @@
 - Adds a visible sync status outside Advanced Settings.
 - Adds “Check Worker data” to show whether the Worker contains daily records before importing.
 - Keeps Strava Worker, Apple Health Worker, OAuth, KV, Secrets, token format, adapters, sync manager and IndexedDB schema unchanged.
+
+## 2.7.0 — Personal Trends & Baselines
+
+- Added 7, 28 and 90 day Health & Recovery views.
+- Added rolling personal baseline bands for Sleep, Resting HR and HRV.
+- Added latest value and percentage deviation from the athlete's own baseline.
+- Added estimated seven-day sleep debt with explicit observed-night coverage.
+- Added Fitness, Fatigue and Form using transparent 42/7-day exponential load averages.
+- Added combined data-confidence scoring for trend interpretation.
+- Kept provider names out of the main analysis and preserved all existing sync Workers and secrets.

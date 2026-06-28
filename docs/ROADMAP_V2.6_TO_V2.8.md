@@ -6,24 +6,22 @@
 - Daily Readiness hero
 - Recovery / Load / Energy pillars
 - Unified Health Snapshot
-- 7-day sparklines
 - Health & Recovery drill-down
-- 7-day and 28-day charts
 - Explainable Coach Insight
 - Data source details moved out of the main experience
 
-## v2.7 — Personal Trends & Baselines
+## v2.7 — Personal Trends & Baselines (completed)
 
 - 7 / 28 / 90 day trend controls
-- Robust personal baseline bands
-- Sleep debt and sleep consistency
+- Personal baseline bands for Sleep, Resting HR and HRV
+- Metric-specific detailed trend expansion
+- Estimated seven-day sleep debt and sleep-duration consistency
 - HRV and Resting HR deviation history
-- Fitness / Fatigue / Form model
-- Metric-specific detail screens
-- Data coverage and confidence history
-- Correlation views that clearly state association, not causation
+- Fitness / Fatigue / Form model using 42/7-day exponential load averages
+- Data coverage and confidence
+- Observed relationship views with explicit association-not-causation language
 
-## v2.8 — Trail Coach Intelligence
+## v2.8 — Trail Coach Intelligence (next)
 
 - Daily training prescription by readiness and planned session
 - Elevation-aware and downhill-aware load progression

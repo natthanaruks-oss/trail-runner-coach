@@ -29,6 +29,10 @@ export function selectAppleHealthInsights(state, dateKey = localDateKey(), days 
       hrvMs: finiteOrNull(item?.hrvMs)
     };
   });
+  const latestMetricRows = Object.fromEntries(DISPLAY_KEYS.map(key => [
+    key,
+    [...rows].reverse().find(row => row[key] != null) || null
+  ]));
 
   const syncMeta = latestAppleHealthSyncMeta(state.metadata || []);
   const latestBody = [...(state.bodyComposition || [])]
@@ -36,15 +40,20 @@ export function selectAppleHealthInsights(state, dateKey = localDateKey(), days 
     .sort((a, b) => String(b.measuredAt || b.date).localeCompare(String(a.measuredAt || a.date)))[0] || null;
   const target = nutritionTarget(state, dateKey);
   const energyBalance = energyBalanceForDate(state, dateKey);
-  const metrics = Object.fromEntries(DISPLAY_KEYS.map(key => [key, finiteOrNull(appleCheckin?.[key])]));
+  const metrics = Object.fromEntries(DISPLAY_KEYS.map(key => [key, latestMetricRows[key]?.[key] ?? null]));
+  const metricDates = Object.fromEntries(DISPLAY_KEYS.map(key => [key, latestMetricRows[key]?.date || null]));
   const availableKeys = DISPLAY_KEYS.filter(key => metrics[key] != null);
+  const availableMetricDates = [...new Set(availableKeys.map(key => metricDates[key]).filter(Boolean))];
+  const metricDate = availableMetricDates.sort((a, b) => String(b).localeCompare(String(a)))[0] || appleCheckin?.date || null;
   const recoveryAvailable = RECOVERY_KEYS.filter(key => metrics[key] != null).length;
   const behaviorAvailable = BEHAVIOR_KEYS.filter(key => metrics[key] != null).length;
 
   return {
     dateKey,
-    metricDate: appleCheckin?.date || null,
-    isCurrentDay: appleCheckin?.date === dateKey,
+    metricDate,
+    metricDates,
+    hasMixedMetricDates: availableMetricDates.length > 1,
+    isCurrentDay: metricDate === dateKey,
     checkin: appleCheckin,
     hasData: availableKeys.length > 0,
     partial: availableKeys.length > 0 && availableKeys.length < DISPLAY_KEYS.length,
