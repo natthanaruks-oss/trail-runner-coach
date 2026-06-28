@@ -51,9 +51,9 @@ export function renderCheckin(container, state, app) {
       <div class="form-grid">
         <div class="field full"><label for="date">${en ? 'Date' : 'วันที่'}</label><input id="date" name="date" type="date" value="${date}"></div>
         <details class="field full readiness-manual-override"><summary>${en ? 'Manual recovery override (optional)' : 'แก้ไขข้อมูลจากอุปกรณ์ด้วยตนเอง (กรณีจำเป็น)'}</summary><div class="form-grid" style="margin-top:12px">
-          ${fieldNumber({ name:'sleepHours', label:en ? 'Sleep hours' : 'ชั่วโมงนอน', value:draft.sleepHours ?? '', min:0, max:14, step:.1, placeholder:'6.5' })}
-          ${fieldNumber({ name:'restingHr', label:'Resting HR', value:draft.restingHr ?? '', min:30, max:150, placeholder:'bpm' })}
-          ${fieldNumber({ name:'hrvMs', label:'HRV', value:draft.hrvMs ?? '', min:1, max:300, placeholder:'ms' })}
+          ${fieldNumber({ name:'sleepHours', label:en ? 'Sleep hours' : 'ชั่วโมงนอน', value:draft.sleepHours ?? '', min:0, max:14, step:'any', placeholder:'6.5' })}
+          ${fieldNumber({ name:'restingHr', label:'Resting HR', value:draft.restingHr ?? '', min:30, max:150, step:'any', placeholder:'bpm' })}
+          ${fieldNumber({ name:'hrvMs', label:'HRV', value:draft.hrvMs ?? '', min:1, max:300, step:'any', placeholder:'ms' })}
         </div></details>
         ${rangeField({ name:'sleepQuality', label: en ? 'Perceived sleep quality · 1 poor – 5 good' : 'คุณภาพการนอนที่รู้สึก 1 แย่ – 5 ดี', value:existing?.sleepQuality ?? 3 })}
         ${rangeField({ name:'fatigue', label: en ? 'Fatigue · 1 low – 5 high' : 'ความล้า 1 น้อย – 5 มาก', value:existing?.fatigue ?? 3 })}
@@ -84,6 +84,12 @@ export function renderCheckin(container, state, app) {
   `;
 
   bindRanges(container);
+  const checkinForm = container.querySelector('#checkin-form');
+  checkinForm?.addEventListener('invalid', event => {
+    const details = event.target.closest('details');
+    if (details) details.open = true;
+  }, true);
+
   const dateInput = container.querySelector('#date');
   dateInput.addEventListener('change', () => { app.ui.checkinDate = dateInput.value; app.render(); });
 
@@ -106,7 +112,7 @@ export function renderCheckin(container, state, app) {
     }
   });
 
-  container.querySelector('#checkin-form').addEventListener('submit', async event => {
+  checkinForm.addEventListener('submit', async event => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const record = formToCheckin(data, draft, context);
