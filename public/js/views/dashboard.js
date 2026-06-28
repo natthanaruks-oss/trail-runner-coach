@@ -1,7 +1,8 @@
 import { selectRaceCountdown, selectToday, selectWeekSummary, selectRecentActivities, selectScoreHistory } from '../core/selectors.js';
 import { selectAppleHealthInsights } from '../core/health-insights.js';
 import { buildUnifiedInsights } from '../core/unified-insights.js';
-import { recommendSession } from '../engines/recommendation.js';
+import { buildPersonalTrends } from '../core/personal-trends.js';
+import { buildTrailCoachIntelligence } from '../core/trail-coach.js';
 import { formatNumber, metricCard, pageHeader, escapeHtml } from './components.js';
 import { formatThaiDate } from '../core/date.js';
 import { raceSummary } from '../core/races.js';
@@ -16,7 +17,6 @@ export function renderDashboard(container, state, app) {
   const countdown = selectRaceCountdown(state);
   const week = selectWeekSummary(state, today.plan.weekSessions);
   const session = today.plan.todaySession;
-  const recommendation = recommendSession(today.readiness, session);
   const nutrition = foodTotals(state, today.dateKey);
   const nutritionPlan = nutritionTarget(state, today.dateKey);
   const nutritionBalance = energyBalanceForDate(state, today.dateKey);
@@ -25,12 +25,14 @@ export function renderDashboard(container, state, app) {
   const health = selectAppleHealthInsights(state, today.dateKey, 7);
   const scoreHistory = selectScoreHistory(state, 7, today.dateKey);
   const unified = buildUnifiedInsights({ today, health, scoreHistory, nutritionBalance, nutritionTarget: nutritionPlan });
+  const personalTrends = buildPersonalTrends({ healthRows: health.rows, activities: state.activities, endDateKey: today.dateKey, rangeDays: 90, sleepTargetHours: 7.5 });
+  const trailCoach = buildTrailCoachIntelligence({ state, today, unified, personalTrends, week, countdown, endDateKey: today.dateKey });
   const en = app.language === 'en';
 
   container.innerHTML = `
     ${pageHeader(en ? 'Today' : 'วันนี้', formatThaiDate(today.dateKey), today.race ? `${escapeHtml(today.race.name)} · ${escapeHtml(raceSummary(today.race))}` : (en ? 'Choose a target race to start planning' : 'เลือกสนามเป้าหมายเพื่อเริ่มวางแผน'))}
 
-    ${renderReadinessHero({ today, session, recommendation, unified, en, app })}
+    ${renderReadinessHero({ today, session, unified, trailCoach, en, app })}
 
     <section class="section unified-pillars-section">
       <div class="section-head"><div><h2>${en ? 'Your training state' : 'สถานะการฝึกวันนี้'}</h2><small>${en ? 'One view of recovery, load and energy' : 'รวม Recovery, Training Load และ Energy ไว้ในภาพเดียว'}</small></div><a href="#/health">${en ? 'View analysis' : 'ดูการวิเคราะห์'}</a></div>
@@ -67,7 +69,9 @@ export function renderDashboard(container, state, app) {
 
     ${renderHealthSnapshot({ health, unified, today, en })}
 
-    ${renderCoachInsight({ unified, today, recommendation, en })}
+    ${renderCoachInsight({ unified, today, trailCoach, en })}
+
+    ${renderTrailCoachSummary({ trailCoach, en })}
 
     <section class="grid three section compact-kpi-row">
       ${metricCard(countdown.race ? (en ? `To ${escapeHtml(countdown.race.name)}` : `ถึง ${escapeHtml(countdown.race.name)}`) : (en ? 'Race day' : 'วันแข่งขัน'), countdown.race ? countdown.days : '—', countdown.race ? (en ? 'days' : 'วัน') : '', countdown.race ? `${countdown.weeks} ${en ? 'weeks' : 'สัปดาห์'} ${countdown.remainderDays} ${en ? 'days' : 'วัน'}` : (en ? 'No race selected' : 'ยังไม่มีสนามที่เลือก'))}
@@ -136,11 +140,11 @@ export function renderDashboard(container, state, app) {
   scheduleDashboardAutoPull(container, state, app, health, en);
 }
 
-function renderReadinessHero({ today, session, recommendation, unified, en, app }) {
+function renderReadinessHero({ today, session, unified, trailCoach, en, app }) {
   const score = unified.readiness.score;
   const status = unified.readiness.status;
   const label = readinessLabel(unified.readiness, en);
-  const coachAction = coachActionText(unified.coach.actionCode, en);
+  const coachAction = trailPrescriptionText(trailCoach.prescription, en);
   const plannedTitle = session ? (app.field(session, 'title') || session.t) : (en ? 'No planned session' : 'ยังไม่มีแผนซ้อมวันนี้');
   const workoutMeta = session ? `${escapeHtml(session.t || 'Rest')}${session.km ? ` · ${session.km} km · +${session.vert || 0} m` : ''}` : '';
   return `<section class="card unified-readiness-hero tone-${escapeHtml(status || 'unknown')}">
@@ -164,7 +168,7 @@ function renderReadinessHero({ today, session, recommendation, unified, en, app 
     <div class="button-row unified-hero-actions">
       <button class="button primary" data-action="checkin">${today.checkin ? (en ? 'Edit check-in' : 'แก้ไข Check-in') : (en ? 'Check in' : 'Check-in ก่อนซ้อม')}</button>
       ${session ? `<button class="button secondary" data-action="record-workout">${en ? 'Record workout' : 'บันทึกผลจริง'}</button>` : ''}
-      <a class="button ghost" href="#/health">${en ? 'Why this result?' : 'ดูเหตุผล'}</a>
+      <a class="button ghost" href="#/coach">${en ? 'Open Trail Coach' : 'เปิด Trail Coach'}</a>
     </div>
   </section>`;
 }
@@ -188,24 +192,40 @@ function renderHealthSnapshot({ health, unified, today, en }) {
   </section>`;
 }
 
-function renderCoachInsight({ unified, today, recommendation, en }) {
-  const action = coachActionText(unified.coach.actionCode, en);
+function renderCoachInsight({ unified, today, trailCoach, en }) {
+  const action = trailPrescriptionText(trailCoach.prescription, en);
   const contributorItems = unified.contributors.length
     ? unified.contributors.map(item => `<li class="insight-contributor ${escapeHtml(item.tone)}"><span>${contributorIcon(item.tone)}</span><div><strong>${escapeHtml(contributorText(item, en))}</strong><small>${escapeHtml(contributorDetail(item, en))}</small></div></li>`).join('')
     : `<li class="insight-contributor neutral"><span>•</span><div><strong>${en ? 'Keep collecting daily data' : 'เก็บข้อมูลต่อเนื่อง'}</strong><small>${en ? 'A longer baseline will make the recommendation more personal.' : 'Baseline ที่ยาวขึ้นจะทำให้คำแนะนำเฉพาะตัวมากขึ้น'}</small></div></li>`;
   return `<section class="section coach-insight-section">
-    <div class="section-head"><div><h2>${en ? 'Coach insight' : 'บทวิเคราะห์จาก Coach'}</h2><small>${en ? 'Action first, data second' : 'สรุปสิ่งที่ควรทำก่อน แล้วจึงอธิบายด้วยข้อมูล'}</small></div><a href="#/scores">${en ? 'Scoring details' : 'ดูหลักการให้คะแนน'}</a></div>
+    <div class="section-head"><div><h2>${en ? 'Coach insight' : 'บทวิเคราะห์จาก Coach'}</h2><small>${en ? 'Action first, data second' : 'สรุปสิ่งที่ควรทำก่อน แล้วจึงอธิบายด้วยข้อมูล'}</small></div><a href="#/coach">${en ? 'Full coaching analysis' : 'ดูการวิเคราะห์เต็ม'}</a></div>
     <article class="card flat coach-insight-card">
       <div class="coach-insight-head">
         <div><span class="status ${toneClass(unified.readiness.status)}">${escapeHtml(action.badge)}</span><h3>${escapeHtml(action.title)}</h3><p>${escapeHtml(action.detail)}</p></div>
         <div class="coach-confidence"><strong>${unified.readiness.confidence}%</strong><span>${en ? 'confidence' : 'ความมั่นใจ'}</span></div>
       </div>
       <ul class="insight-contributor-list">${contributorItems}</ul>
-      <div class="coach-next-action"><strong>${en ? 'Today’s practical action' : 'สิ่งที่ควรทำวันนี้'}</strong><span>${escapeHtml(recommendation.intensity)} · ${escapeHtml(recommendation.reasons.join(' · '))}</span></div>
+      <div class="coach-next-action"><strong>${en ? 'Today’s practical action' : 'สิ่งที่ควรทำวันนี้'}</strong><span>${escapeHtml(trailPrescriptionDetail(trailCoach.prescription, en))}</span></div>
       <small class="health-disclaimer">${en ? 'Training guidance only, not a medical diagnosis.' : 'ใช้ประกอบการวางแผนฝึก ไม่ใช่การวินิจฉัยทางการแพทย์'}</small>
     </article>
   </section>`;
 }
+
+
+function renderTrailCoachSummary({ trailCoach, en }) {
+  const race = trailCoach.race;
+  const longRun = trailCoach.longRun;
+  const elevation = trailCoach.elevationLoad;
+  return `<section class="section trail-coach-summary-section">
+    <div class="section-head"><div><h2>${en ? 'Trail-specific readiness' : 'ความพร้อมเฉพาะ Trail'}</h2><small>${en ? 'Race preparation, long-run endurance and vertical load' : 'รวมความพร้อมสนาม Endurance จาก Long Run และโหลดทางชัน'}</small></div><a href="#/coach">${en ? 'Open Trail Coach' : 'ดูรายละเอียด'}</a></div>
+    <div class="trail-summary-grid">
+      ${trailSummaryCard(en ? 'Race readiness' : 'ความพร้อมสนาม', race.score, dashboardRaceStatus(race.status, en), race.countdownDays == null ? (en ? 'Choose a target race' : 'เลือกสนามเป้าหมาย') : `${race.countdownDays} ${en ? 'days to race' : 'วันถึงสนาม'}`, scoreTone(race.score))}
+      ${trailSummaryCard(en ? 'Long-run readiness' : 'ความพร้อม Long Run', longRun.score, dashboardLongRunStatus(longRun.status, en), `${formatNumber(longRun.longestDistanceKm,1)} km · ${formatMinutes(longRun.longestDurationMin,en)}`, scoreTone(longRun.score))}
+      ${trailSummaryCard(en ? '7-day vertical load' : 'Vertical load 7 วัน', elevation.sessions ? dashboardElevationScore(elevation) : null, dashboardElevationStatus(elevation.status,en), `${formatNumber(elevation.distanceKm,1)} km · +${formatNumber(elevation.elevationGainM)} m`, elevation.status === 'spike' ? 'risk' : elevation.status === 'watch' ? 'watch' : elevation.sessions ? 'good' : 'neutral')}
+    </div>
+  </section>`;
+}
+function trailSummaryCard(title, score, status, detail, tone) { return `<a class="card flat trail-summary-card tone-${escapeHtml(tone)}" href="#/coach"><div class="pillar-card-head"><span>${escapeHtml(title)}</span><i>›</i></div><div class="pillar-value-row"><strong>${score == null ? '—' : formatNumber(score)}</strong>${score == null ? '' : '<small>/100</small>'}</div><div class="pillar-label">${escapeHtml(status)}</div><div class="pillar-detail">${escapeHtml(detail)}</div></a>`; }
 
 function pillarCard({ href, title, value, label, detail, trend, tone }) {
   return `<a class="card flat unified-pillar-card tone-${escapeHtml(tone)}" href="${escapeHtml(href)}">
@@ -429,3 +449,31 @@ function formatWeekChange(value, en) { return value == null ? (en ? 'not enough 
 function signedKcal(value) { const number = Number(value) || 0; return `${number > 0 ? '+' : ''}${formatNumber(number)} kcal`; }
 function formatSleep(hours, en) { const totalMinutes = Math.round(Number(hours) * 60); const h = Math.floor(totalMinutes / 60); const m = totalMinutes % 60; return `${h}${en ? 'h' : 'ชม.'} ${m}${en ? 'm' : 'น.'}`; }
 function formatTimestamp(value, en) { const date = new Date(value); if (Number.isNaN(date.getTime())) return String(value || '—'); return date.toLocaleString(en ? 'en-GB' : 'th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+
+
+function trailPrescriptionText(item, en) {
+  const map = {
+    follow_plan: { badge: en ? 'ON TRACK' : 'เป็นไปตามแผน', title: en ? 'Follow the planned session' : 'ทำตามแผนได้', detail: en ? 'Keep the planned volume and avoid adding unplanned intensity.' : 'รักษาปริมาณตามแผนและไม่เพิ่มความหนักนอกแผน' },
+    reduce_15: { badge: en ? 'ADJUST' : 'ปรับเล็กน้อย', title: en ? 'Reduce today’s load by about 15%' : 'ลดโหลดวันนี้ประมาณ 15%', detail: en ? 'Keep the effort controlled and reduce climbing if fatigue rises.' : 'คุมความหนักและลดทางชันหากความล้าเพิ่มขึ้น' },
+    reduce_25: { badge: en ? 'ADJUST' : 'ควรปรับแผน', title: en ? 'Reduce today’s load by about 25%' : 'ลดโหลดวันนี้ประมาณ 25%', detail: en ? 'Use easy aerobic effort and shorten distance or vertical gain.' : 'ใช้ Easy aerobic และลดระยะหรือ Vertical gain' },
+    replace_with_easy: { badge: en ? 'EASY' : 'เปลี่ยนเป็น Easy', title: en ? 'Replace the hard session with easy work' : 'เปลี่ยน Session หนักเป็น Easy', detail: en ? 'Choose easy aerobic running, walking or gentle mobility.' : 'เลือก Easy aerobic เดิน หรือ Mobility เบา ๆ' },
+    replace_easy_or_rest: { badge: en ? 'RECOVER' : 'เน้นฟื้นตัว', title: en ? 'Use recovery work or rest' : 'ทำ Recovery เบามากหรือพัก', detail: en ? 'Current recovery does not support a demanding session.' : 'Recovery ปัจจุบันไม่สนับสนุนการฝึกที่หนัก' },
+    rest_assess: { badge: en ? 'STOP' : 'พักก่อน', title: en ? 'Rest and assess symptoms' : 'พักและประเมินอาการ', detail: en ? 'Pain or symptom safety signals override the training plan.' : 'Pain หรือสัญญาณอาการมีอำนาจเหนือแผนซ้อม' },
+    check_in_first: { badge: en ? 'CHECK IN' : 'Check-in ก่อน', title: en ? 'Check in before hard training' : 'ทำ Check-in ก่อน Session หนัก', detail: en ? 'Keep effort easy until pain, fatigue and soreness are confirmed.' : 'คุมความหนักไว้ระดับ Easy จนกว่าจะประเมิน Pain ความล้า และอาการล้ากล้ามเนื้อ' },
+    cap_long_run: { badge: en ? 'CAP LONG RUN' : 'ลด Long Run', title: en ? 'Shorten the long run' : 'ลด Long Run', detail: en ? 'Endurance history is not yet strong enough for the full planned dose.' : 'ประวัติ Endurance ยังไม่รองรับปริมาณเต็มตามแผน' },
+    taper_quality: { badge: 'TAPER', title: en ? 'Keep quality short during taper' : 'รักษา Quality ให้สั้นในช่วง Taper', detail: en ? 'Preserve intensity without adding volume or vertical work.' : 'รักษาความคมโดยไม่เพิ่ม Volume หรือ Vertical' }
+  };
+  return map[item?.actionCode] || map.follow_plan;
+}
+function trailPrescriptionDetail(item, en) {
+  const distance = item?.suggestedDistanceKm == null ? '' : `${formatNumber(item.suggestedDistanceKm,1)} km`;
+  const vertical = item?.suggestedVerticalM == null ? '' : `+${formatNumber(item.suggestedVerticalM)} m`;
+  const intensity = trailIntensityLabel(item?.intensityCode,en);
+  return [intensity,distance,vertical].filter(Boolean).join(' · ');
+}
+function trailIntensityLabel(code,en) { const map={planned_quality:en?'Planned quality':'Quality ตามแผน',easy_controlled:en?'Easy / controlled':'Easy / คุมความหนัก',rest_only:en?'Rest only':'พัก',easy_until_checkin:en?'Easy until check-in':'Easy จนกว่า Check-in',recovery_only:en?'Very light recovery':'Recovery เบามาก',easy_aerobic:'Easy aerobic',controlled_quality:en?'Controlled quality':'Quality แบบคุม',easy_endurance:'Easy endurance',short_quality_no_extra:en?'Short quality, no extras':'Quality สั้น ไม่เพิ่มงาน'}; return map[code] || code || '—'; }
+function dashboardRaceStatus(status,en){const map={no_race:en?'No race selected':'ยังไม่ได้เลือกสนาม',insufficient:en?'Building evidence':'กำลังสร้างหลักฐาน',building:en?'Building for this phase':'กำลังสร้างตาม Phase',on_track:en?'On track':'อยู่ในแนวทาง',watch:en?'Key gaps need attention':'มี Gap ที่ควรแก้'};return map[status]||status;}
+function dashboardLongRunStatus(status,en){const map={ready:en?'Ready':'พร้อม',moderate:en?'Controlled':'ทำได้โดยต้องคุม',limited:en?'Limited':'ควรลด',not_ready:en?'Not ready':'ยังไม่พร้อม',stop:en?'Stop':'หยุด'};return map[status]||status;}
+function dashboardElevationStatus(status,en){const map={no_data:en?'No recent load':'ยังไม่มีข้อมูล',spike:en?'Vertical spike':'Vertical เพิ่มเร็ว',watch:en?'Vertical rising':'Vertical กำลังเพิ่ม',mountain_specific:en?'Mountain-specific':'เฉพาะทางภูเขา',general:en?'General trail load':'โหลด Trail ทั่วไป'};return map[status]||status;}
+function dashboardElevationScore(item){return Math.round(Math.max(0,Math.min(100,45+Math.min(35,item.climbDensityMPerKm/4)+(item.activeDays*5)-(item.status==='spike'?25:0))));}
+function formatMinutes(minutes,en){const total=Math.max(0,Number(minutes)||0);const h=Math.floor(total/60);const m=total%60;return h?`${h}${en?'h':'ชม.'} ${m?`${m}${en?'m':'น.'}`:''}`.trim():`${m}${en?'m':'น.'}`;}

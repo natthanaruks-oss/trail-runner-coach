@@ -40,6 +40,7 @@ test('application initializes the multi-race IndexedDB model and renders primary
     ['plan', 'แผนซ้อม'],
     ['scores', 'Strain & Recovery'],
     ['health', 'สุขภาพและการฟื้นตัว'],
+    ['coach', 'Trail Coach'],
     ['progress', 'แดชบอร์ดความก้าวหน้า'],
     ['checkin', 'Daily Readiness Check'],
     ['rehab', 'Rehab & Prehab'],

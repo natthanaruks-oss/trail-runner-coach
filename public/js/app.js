@@ -23,6 +23,7 @@ import { renderLog } from './views/log.js';
 import { renderScores } from './views/scores.js';
 import { renderProgress } from './views/progress.js';
 import { renderHealth } from './views/health.js';
+import { renderCoach } from './views/coach.js';
 import { renderConnections, refreshConnectionsSyncUi } from './views/connections.js';
 import { renderConnectionsHome } from './views/connections-home.js';
 import { renderCloudBackup } from './views/cloud-backup.js';
@@ -59,6 +60,7 @@ const routes = {
   scores: renderScores,
   progress: renderProgress,
   health: renderHealth,
+  coach: renderCoach,
   connections: renderConnections,
   'connections-home': renderConnectionsHome,
   'cloud-backup': renderCloudBackup,
@@ -123,7 +125,7 @@ function render(options = {}) {
       ? 'fuel'
       : ['pain','body','data','connections','connections-home','cloud-backup','apple-health-shortcut','settings','races','gear','motivation','more','log','checkin','progress'].includes(route)
         ? 'more'
-        : ['scores','health'].includes(route) ? 'today' : route;
+        : ['scores','health','coach'].includes(route) ? 'today' : route;
   document.querySelectorAll('[data-route]').forEach(link => {
     const active = link.dataset.route === activeNav;
     link.classList.toggle('active', active);

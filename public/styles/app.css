@@ -1767,3 +1767,75 @@ a[aria-disabled="true"] { pointer-events:none; opacity:.45; }
 .association-card>small{color:var(--muted);font-size:9px;line-height:1.45}
 @media(max-width:900px){.personal-trend-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.metric-focus-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.personal-trend-summary-grid,.association-grid{grid-template-columns:1fr}.metric-focus-stats{grid-template-columns:1fr 1fr}}
+
+/* v2.8.0 — trail coach intelligence */
+.trail-coach-hero{display:grid;gap:16px;position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(25,57,54,.9),rgba(12,24,40,.98) 58%)}
+.trail-coach-hero::after{content:"";position:absolute;width:220px;height:220px;right:-100px;top:-120px;border-radius:50%;background:rgba(102,227,189,.08);pointer-events:none}
+.trail-coach-hero.tone-risk{background:linear-gradient(145deg,rgba(73,31,38,.8),rgba(12,24,40,.98) 58%)}
+.trail-coach-hero-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start;position:relative;z-index:1}
+.trail-coach-hero-head h2{margin:7px 0 6px;font-size:clamp(24px,6vw,34px);line-height:1.08;letter-spacing:-.035em}
+.trail-coach-hero-head p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+.trail-coach-confidence{display:grid;min-width:86px;text-align:right}
+.trail-coach-confidence strong{font-size:34px;letter-spacing:-.05em}
+.trail-coach-confidence span{color:var(--muted);font-size:9px}
+.trail-prescription-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;position:relative;z-index:1}
+.trail-prescription-metric{min-width:0;padding:11px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(5,15,25,.28)}
+.trail-prescription-metric span{display:block;color:var(--muted);font-size:9px}
+.trail-prescription-metric strong{display:block;margin-top:6px;font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.trail-prescription-metric small{display:block;margin-top:4px;color:var(--mint);font-size:8px}
+.trail-reason-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;position:relative;z-index:1}
+.trail-reason-row{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid var(--line);border-radius:13px;background:rgba(7,16,29,.42)}
+.trail-reason-row>span{display:grid;place-items:center;flex:0 0 24px;height:24px;border-radius:50%;background:rgba(255,255,255,.05);font-weight:850}
+.trail-reason-row.good>span{color:var(--green)}
+.trail-reason-row.watch>span{color:var(--amber)}
+.trail-reason-row.risk>span{color:var(--red)}
+.trail-reason-row strong{display:block;font-size:10.5px;line-height:1.4}
+.trail-reason-row small{display:block;margin-top:3px;color:var(--muted);font-size:9px}
+.trail-data-warning{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid rgba(255,180,84,.22);border-radius:13px;background:rgba(255,180,84,.07);font-size:10px;position:relative;z-index:1}
+.trail-data-warning span{color:var(--muted);text-align:right;line-height:1.45}
+.trail-readiness-grid,.trail-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.trail-readiness-card,.trail-summary-card{min-width:0;position:relative;overflow:hidden}
+.trail-readiness-card::before,.trail-summary-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--line)}
+.trail-readiness-card.tone-good::before,.trail-summary-card.tone-good::before{background:var(--green)}
+.trail-readiness-card.tone-watch::before,.trail-summary-card.tone-watch::before{background:var(--amber)}
+.trail-readiness-card.tone-risk::before,.trail-summary-card.tone-risk::before{background:var(--red)}
+.trail-readiness-card>span{color:var(--muted);font-size:10px;font-weight:720}
+.trail-readiness-card>div{margin-top:10px;display:flex;align-items:baseline;gap:3px}
+.trail-readiness-card>div strong{font-size:34px;letter-spacing:-.05em}
+.trail-readiness-card>div small{color:var(--muted);font-size:9px}
+.trail-readiness-card h3{margin:7px 0 5px;font-size:12px}
+.trail-readiness-card p{margin:0;color:var(--muted);font-size:9px;line-height:1.5}
+.trail-coach-detail-grid{align-items:start}
+.trail-race-components,.trail-longrun-components{display:grid;gap:12px}
+.trail-component-row{display:grid;gap:6px}
+.trail-component-row>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:10px}
+.trail-component-row>div:first-child span{color:var(--muted)}
+.trail-component-row .progress{height:6px}
+.trail-gap-list{display:flex;flex-wrap:wrap;gap:6px;padding-top:11px;border-top:1px solid var(--line)}
+.trail-gap-list strong{width:100%;font-size:10px}
+.trail-gap-list span{padding:6px 8px;border-radius:999px;background:rgba(255,180,84,.09);color:var(--amber);font-size:8.5px}
+.trail-evidence-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.trail-evidence-grid>div{padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.018)}
+.trail-evidence-grid span{display:block;color:var(--muted);font-size:8.5px}
+.trail-evidence-grid strong{display:block;margin-top:5px;font-size:13px}
+.trail-week-chart{display:grid;grid-template-columns:repeat(6,minmax(72px,1fr));gap:8px;min-width:560px;height:220px;align-items:end;padding:12px 4px 0}
+.trail-progression-card{overflow-x:auto}
+.trail-week-column{display:grid;grid-template-rows:150px auto auto;gap:5px;text-align:center;min-width:0}
+.trail-week-bars{height:150px;display:flex;align-items:flex-end;justify-content:center;gap:4px;border-bottom:1px solid var(--line)}
+.trail-week-bars i{display:block;width:12px;height:var(--h);min-height:3px;border-radius:5px 5px 1px 1px;background:var(--blue)}
+.trail-week-bars i.vertical{background:var(--mint)}
+.trail-week-bars i.load{background:var(--amber)}
+.trail-week-column>span{font-size:9px;font-weight:750}
+.trail-week-column>small{color:var(--muted);font-size:7.8px;white-space:nowrap}
+.trail-chart-legend{display:flex;justify-content:center;gap:15px;min-width:560px;margin-top:9px;color:var(--muted);font-size:9px}
+.trail-chart-legend span::before{content:"";display:inline-block;width:10px;height:6px;margin-right:5px;border-radius:2px;background:var(--blue)}
+.trail-chart-legend .vertical::before{background:var(--mint)}
+.trail-chart-legend .load::before{background:var(--amber)}
+.trail-progression-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:560px;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)}
+.trail-progression-summary>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px;border-radius:11px;background:rgba(255,255,255,.018)}
+.trail-progression-summary span{color:var(--muted);font-size:8.5px}
+.trail-progression-summary strong{font-size:11px}
+.trail-method-card p{margin:0;color:var(--muted);font-size:11px;line-height:1.6}
+.trail-method-card>small{display:block;margin-top:9px;color:var(--muted);font-size:9px}
+@media(max-width:700px){.trail-prescription-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.trail-reason-list{grid-template-columns:1fr}.trail-readiness-grid,.trail-summary-grid{grid-template-columns:1fr}.trail-coach-detail-grid{grid-template-columns:1fr}.trail-coach-hero-head{grid-template-columns:minmax(0,1fr) auto}}
+@media(max-width:390px){.trail-coach-hero-head{grid-template-columns:1fr}.trail-coach-confidence{text-align:left;grid-template-columns:auto auto;align-items:baseline;justify-content:start;gap:5px}.trail-prescription-grid{grid-template-columns:1fr 1fr}.trail-data-warning{display:grid}.trail-data-warning span{text-align:left}.trail-evidence-grid{grid-template-columns:1fr 1fr}}

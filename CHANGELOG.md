@@ -1,3 +1,13 @@
+# Changelog
+
+## 2.8.0 — Trail Coach Intelligence
+
+- Added a provider-neutral Trail Coach detail experience.
+- Added pain-gated daily prescriptions with distance, vertical and intensity adjustments.
+- Added elevation-aware load, long-run readiness and six-week trail progression.
+- Added phase-aware race readiness with transparent contributors and confidence.
+- Preserved the repaired latest-non-null health insight dependency and all sync Workers.
+
 ## 2.6.0 — Unified Health & Training Dashboard
 
 - Rebuilt Today around one provider-neutral athlete view instead of separate Apple Health and Strava sections.

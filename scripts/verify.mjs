@@ -20,7 +20,9 @@ const required = [
   'public/js/core/apple-health-auto-pull.js',
   'public/js/core/unified-insights.js',
   'public/js/core/personal-trends.js',
+  'public/js/core/trail-coach.js',
   'public/js/views/health.js',
+  'public/js/views/coach.js',
   'public/js/data/food-catalog.js',
   'public/js/data/training-library.js',
   'public/js/data/thai-food-dataset.js',
@@ -42,6 +44,7 @@ const required = [
   'docs/SCORE_CALIBRATION.md',
   'docs/PROGRESS_DASHBOARD.md',
   'docs/PERSONAL_TRENDS_V2.7.md',
+  'docs/TRAIL_COACH_INTELLIGENCE_V2.8.md',
   'scripts/setup-strava.mjs',
   'scripts/setup-google-health.mjs',
   'scripts/lib/google-health-setup.mjs',
@@ -86,11 +89,11 @@ for (const file of await walk(root)) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (packageJson.version !== '2.7.0') throw new Error(`Expected package version 2.7.0, received ${packageJson.version}`);
+if (packageJson.version !== '2.8.0') throw new Error(`Expected package version 2.8.0, received ${packageJson.version}`);
 const serviceWorker = await readFile(resolve(root, 'public/service-worker.js'), 'utf8');
-if (!serviceWorker.includes('trail-runner-coach-v2.7.0')) throw new Error('Service-worker cache version was not bumped to 2.7.0');
+if (!serviceWorker.includes('trail-runner-coach-v2.8.0')) throw new Error('Service-worker cache version was not bumped to 2.8.0');
 const constants = await readFile(resolve(root, 'public/js/core/constants.js'), 'utf8');
-if (!constants.includes("APP_VERSION = '2.7.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
+if (!constants.includes("APP_VERSION = '2.8.0'") || !constants.includes('DB_VERSION = 4')) throw new Error('Application or database version is incorrect');
 const dedupEngine = await readFile(resolve(root, 'public/js/core/activity-dedup.js'), 'utf8');
 if (!dedupEngine.includes('scoreActivityMatch') || !dedupEngine.includes('externalRefs')) throw new Error('Activity deduplication engine is incomplete');
 const activityImport = await readFile(resolve(root, 'public/js/adapters/activity-import.js'), 'utf8');
@@ -117,6 +120,11 @@ const healthView = await readFile(resolve(root, 'public/js/views/health.js'), 'u
 if (!healthView.includes('renderHealth') || !healthView.includes('Recovery signals') || !healthView.includes('Fitness, fatigue & form') || !healthView.includes('Data & sync settings')) throw new Error('Personal trend health detail view is incomplete');
 const personalTrends = await readFile(resolve(root, 'public/js/core/personal-trends.js'), 'utf8');
 if (!personalTrends.includes('buildPersonalTrends') || !personalTrends.includes('buildSleepDebt') || !personalTrends.includes('buildFitnessFatigueForm')) throw new Error('Personal trends engine is incomplete');
+const trailCoach = await readFile(resolve(root, 'public/js/core/trail-coach.js'), 'utf8');
+if (!trailCoach.includes('buildTrailCoachIntelligence') || !trailCoach.includes('buildRaceReadiness') || !trailCoach.includes('buildLongRunReadiness') || !trailCoach.includes('buildElevationAwareLoad') || !trailCoach.includes('pain?.hardStop')) throw new Error('Trail coach intelligence is incomplete or missing the pain safety gate');
+const coachView = await readFile(resolve(root, 'public/js/views/coach.js'), 'utf8');
+if (!coachView.includes('Trail Coach') || !coachView.includes('Six-week progression') || !coachView.includes('Race-readiness contributors')) throw new Error('Trail coach detail view is incomplete');
+if (!dashboardView.includes('Trail-specific readiness') || !dashboardView.includes('#/coach')) throw new Error('Dashboard does not expose Trail Coach progressive disclosure');
 
 const appleAutoPull = await readFile(resolve(root, 'public/js/core/apple-health-auto-pull.js'), 'utf8');
 if (!appleAutoPull.includes('shouldAutoPullAppleHealth') || !appleAutoPull.includes('autoPullAppleHealth')) throw new Error('Apple Health automatic pull is incomplete');
