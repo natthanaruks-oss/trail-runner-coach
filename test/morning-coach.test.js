@@ -128,3 +128,17 @@ test('fallback mode remains conservative when the prescription is absent', () =>
   assert.equal(result.status, 'yellow');
   assert.equal(result.trace.source, 'morning_coach_fallback');
 });
+
+
+test('localized session title never becomes object Object', () => {
+  const input = baseInput();
+  input.today.plan.todaySession.title = {
+    th: 'Easy recovery',
+    en: 'Easy recovery'
+  };
+
+  const result = buildMorningCoach(input);
+
+  assert.equal(result.planned.title, 'Easy recovery');
+  assert.notEqual(String(result.planned.title), '[object Object]');
+});

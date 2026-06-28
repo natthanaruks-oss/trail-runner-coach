@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('Today dashboard renders the local Morning Coach card', async () => {
+test('Today shows one consolidated coach surface', async () => {
   const source = await readFile(
     new URL('../public/js/views/dashboard.js', import.meta.url),
     'utf8'
@@ -13,17 +13,22 @@ test('Today dashboard renders the local Morning Coach card', async () => {
     /import \{ buildMorningCoach \} from '\.\.\/core\/morning-coach\.js';/
   );
   assert.match(source, /const morningCoach = buildMorningCoach\(/);
-  assert.match(source, /\$\{renderMorningCoach\(\{ morningCoach, trailCoach, today, en \}\)\}/);
-  assert.match(source, /data-morning-coach="v1"/);
-  assert.match(source, /href="#\/coach"/);
+  assert.match(source, /โค้ชเช้า · ความพร้อมวันนี้/);
+  assert.doesNotMatch(
+    source,
+    /\$\{renderMorningCoach\(\{\s*morningCoach\s*,\s*trailCoach\s*,\s*today\s*,\s*en\s*\}\)\}/
+  );
 });
 
-test('Morning Coach does not add remote AI or expose an API key', async () => {
-  const engine = await readFile(
+test('Morning Coach remains local and exposes no secret', async () => {
+  const source = await readFile(
     new URL('../public/js/core/morning-coach.js', import.meta.url),
     'utf8'
   );
 
-  assert.doesNotMatch(engine, /\bfetch\s*\(/);
-  assert.doesNotMatch(engine, /OPENAI_API_KEY|ANTHROPIC_API_KEY|CLOUDFLARE_API_TOKEN/);
+  assert.doesNotMatch(source, /\bfetch\s*\(/);
+  assert.doesNotMatch(
+    source,
+    /OPENAI_API_KEY|ANTHROPIC_API_KEY|CLOUDFLARE_API_TOKEN/
+  );
 });

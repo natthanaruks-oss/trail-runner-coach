@@ -164,7 +164,7 @@ export function buildMorningCoach({
     secondaryRoute: action.secondaryRoute,
     planned: {
       type: plannedType,
-      title: plannedSession?.title || plannedSession?.titleTh || plannedSession?.t || plannedType,
+      title: sessionTitle(plannedSession, plannedType),
       distanceKm: numericOrNull(plannedSession?.km),
       verticalM: numericOrNull(plannedSession?.vert),
       durationMin: numericOrNull(plannedSession?.durationMin ?? plannedSession?.minutes)
@@ -196,7 +196,7 @@ function fallbackAction({ today, unified, plannedSession }) {
   const pain = today?.readiness?.pain || {};
   const readiness = numericOrNull(unified?.readiness?.score);
   const recovery = numericOrNull(unified?.pillars?.recovery?.score);
-  const loadRisk = unified?.pillars?.load?.status === 'risk';
+  const loadChangePct = numericOrNull(unified?.pillars?.load?.weekChangePct); const loadRisk = unified?.pillars?.load?.status === 'risk' && (loadChangePct === null || loadChangePct > 20);
   const hard = HARD_SESSION_TYPES.has(sessionType(plannedSession));
 
   if (pain?.hardStop) return 'rest_assess';
@@ -300,6 +300,35 @@ function fallbackIntensity(actionCode) {
 function toneForAction(actionCode) {
   const status = (ACTIONS[actionCode] || ACTIONS.follow_plan).status;
   return status === 'red' ? 'risk' : status === 'yellow' ? 'watch' : 'good';
+}
+
+function sessionTitle(session, fallback = 'Rest') {
+  const candidates = [
+    session?.title,
+    session?.titleTh,
+    session?.titleEn,
+    session?.name,
+    session?.t,
+    fallback
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+
+    if (value && typeof value === 'object') {
+      const nested =
+        value.th ??
+        value.en ??
+        value.th_TH ??
+        value.en_US ??
+        value.label ??
+        value.name;
+
+      if (typeof nested === 'string' && nested.trim()) return nested.trim();
+    }
+  }
+
+  return String(fallback || 'Rest');
 }
 
 function sessionType(session) {

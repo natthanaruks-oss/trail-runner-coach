@@ -95,9 +95,14 @@ export function buildMetricModels(health = {}) {
 }
 
 export function buildLoadBalance(loadTrend = {}) {
-  const ratio = finite(loadTrend?.trendRatio) ? Number(loadTrend.trendRatio) : null;
-  const weekChangePct = finite(loadTrend?.weekChangePct) ? Number(loadTrend.weekChangePct) : null;
+  const ratio = finite(loadTrend?.trendRatio)
+    ? Number(loadTrend.trendRatio)
+    : null;
+  const weekChangePct = finite(loadTrend?.weekChangePct)
+    ? Number(loadTrend.weekChangePct)
+    : null;
   const totalLoad = Number(loadTrend?.last7?.totalLoad || 0);
+
   if (ratio == null) {
     return {
       score: totalLoad > 0 ? 65 : null,
@@ -107,14 +112,39 @@ export function buildLoadBalance(loadTrend = {}) {
       weekChangePct
     };
   }
-  const ratioPenalty = Math.abs(ratio - 1) * 82;
-  const changePenalty = Math.max(0, Math.abs(weekChangePct || 0) - 15) * 0.9;
-  const score = Math.round(clamp(100 - ratioPenalty - changePenalty, 0, 100));
-  const status = score >= 75 ? 'balanced' : score >= 50 ? 'watch' : 'risk';
+
+  const positiveChange = Math.max(0, weekChangePct || 0);
+  const overloadPenalty = Math.max(0, ratio - 1) * 82;
+  const spikePenalty = Math.max(0, positiveChange - 15) * 0.9;
+  let score = Math.round(
+    clamp(100 - overloadPenalty - spikePenalty, 0, 100)
+  );
+
+  const positiveSpike = positiveChange > 35 || ratio > 1.45;
+  const risingLoad = positiveChange > 20 || ratio > 1.25;
+  const underload =
+    (weekChangePct != null && weekChangePct < -35) ||
+    ratio < 0.65;
+
+  let status = 'balanced';
+  let labelCode = 'load_balanced';
+
+  if (positiveSpike) {
+    status = 'risk';
+    labelCode = 'load_spike';
+  } else if (risingLoad) {
+    status = 'watch';
+    labelCode = 'load_rising';
+  } else if (underload) {
+    status = 'underload';
+    labelCode = 'load_below_recent';
+    score = Math.min(score, 65);
+  }
+
   return {
     score,
     status,
-    labelCode: status === 'balanced' ? 'load_balanced' : status === 'watch' ? 'load_changing' : 'load_risk',
+    labelCode,
     ratio,
     weekChangePct
   };
@@ -177,9 +207,31 @@ function buildContributors({ today, metrics, loadBalance, nutritionBalance }) {
     if (hrv.delta <= -8) contributors.push({ code: 'hrv_suppressed', tone: 'risk', value: hrv.value, delta: hrv.delta });
     else if (hrv.delta >= 5) contributors.push({ code: 'hrv_supportive', tone: 'good', value: hrv.value, delta: hrv.delta });
   }
-  if (loadBalance?.status === 'risk') contributors.push({ code: 'load_outside_range', tone: 'risk', value: loadBalance.weekChangePct });
-  else if (loadBalance?.status === 'watch') contributors.push({ code: 'load_changing', tone: 'watch', value: loadBalance.weekChangePct });
-  else if (loadBalance?.status === 'balanced') contributors.push({ code: 'load_balanced', tone: 'good', value: loadBalance.weekChangePct });
+  if (loadBalance?.status === 'risk') {
+  contributors.push({
+    code: 'load_outside_range',
+    tone: 'risk',
+    value: loadBalance.weekChangePct
+  });
+} else if (loadBalance?.status === 'watch') {
+  contributors.push({
+    code: 'load_changing',
+    tone: 'watch',
+    value: loadBalance.weekChangePct
+  });
+} else if (loadBalance?.status === 'underload') {
+  contributors.push({
+    code: 'load_below_recent',
+    tone: 'neutral',
+    value: loadBalance.weekChangePct
+  });
+} else if (loadBalance?.status === 'balanced') {
+  contributors.push({
+    code: 'load_balanced',
+    tone: 'good',
+    value: loadBalance.weekChangePct
+  });
+}
 
   const pain = today?.readiness?.pain;
   if (pain?.hardStop) contributors.unshift({ code: 'pain_hard_stop', tone: 'risk' });

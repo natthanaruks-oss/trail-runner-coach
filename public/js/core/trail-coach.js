@@ -355,7 +355,7 @@ export function buildDailyTrainingPrescription({
   const readinessScore = finite(readiness?.score) ? Number(readiness.score) : null;
   const recoveryScore = finite(recovery?.score) ? Number(recovery.score) : null;
   const energyScore = finite(energy?.score) ? Number(energy.score) : null;
-  const loadRisk = load?.status === 'risk';
+  const loadChangePct = finite(load?.weekChangePct) ? Number(load.weekChangePct) : null; const loadRisk = load?.status === 'risk' && (loadChangePct == null || loadChangePct > 20);
 
   if (!checkinComplete) missing.push('subjective_checkin');
   if (readinessScore == null) missing.push('readiness');
@@ -391,7 +391,7 @@ export function buildDailyTrainingPrescription({
     verticalFactor = isHard ? 0.40 : 0.65;
     intensityCode = 'easy_aerobic';
     if (pain?.caution) reasons.push({ code: 'pain_caution', tone: 'watch' });
-    if (loadRisk) reasons.push({ code: 'load_risk', tone: 'risk', value: load?.weekChangePct });
+    if (loadRisk) reasons.push({ code: 'load_risk', tone: 'risk', value: loadChangePct });
     if (readinessScore != null && readinessScore < 60) reasons.push({ code: 'readiness_moderate', tone: 'watch', value: readinessScore });
   } else if ((recoveryScore != null && recoveryScore < 70) || (energyScore != null && energyScore < 55) || elevationLoad?.status === 'spike') {
     actionCode = 'reduce_15';

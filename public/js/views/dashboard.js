@@ -34,7 +34,7 @@ export function renderDashboard(container, state, app) {
   container.innerHTML = `
     ${pageHeader(en ? 'Today' : 'วันนี้', formatThaiDate(today.dateKey), today.race ? `${escapeHtml(today.race.name)} · ${escapeHtml(raceSummary(today.race))}` : (en ? 'Choose a target race to start planning' : 'เลือกสนามเป้าหมายเพื่อเริ่มวางแผน'))}
 
-    ${renderReadinessHero({ today, session, todayWorkout, unified, trailCoach, en, app })} ${renderMorningCoach({ morningCoach, trailCoach, today, en })}
+    ${renderReadinessHero({ today, session, todayWorkout, unified, trailCoach, en, app })}
 
     <section class="section unified-pillars-section">
       <div class="section-head"><div><h2>${en ? 'Your training state' : 'สถานะการฝึกวันนี้'}</h2><small>${en ? 'One view of recovery, load and energy' : 'รวม Recovery, Training Load และ Energy ไว้ในภาพเดียว'}</small></div><a href="#/health">${en ? 'View analysis' : 'ดูการวิเคราะห์'}</a></div>
@@ -156,7 +156,7 @@ function renderReadinessHero({ today, session, todayWorkout, unified, trailCoach
   return `<section class="card unified-readiness-hero tone-${escapeHtml(status || 'unknown')}">
     <div class="unified-hero-top">
       <div>
-        <div class="eyebrow">${en ? 'DAILY READINESS' : 'ความพร้อมวันนี้'}</div>
+        <div class="eyebrow">${en ? 'MORNING COACH · DAILY READINESS' : 'โค้ชเช้า · ความพร้อมวันนี้'}</div>
         <div class="readiness-score-line"><strong>${score == null ? '—' : formatNumber(score)}</strong><span>/100</span><i class="status-dot ${toneClass(status)}"></i></div>
         <h2>${escapeHtml(label)}</h2>
       </div>
@@ -452,7 +452,7 @@ function renderRecentActivities(activities, en) {
   `).join('') : `<div class="card flat empty">${en ? 'No activity yet — record one or import GPX/TCX/CSV.' : 'ยังไม่มีกิจกรรมจริง — บันทึกเองหรือนำเข้า GPX/TCX/CSV'}</div>`}</div></section>`;
 }
 function scoreTone(score) { return score == null ? 'neutral' : score >= 75 ? 'good' : score >= 50 ? 'watch' : 'risk'; }
-function loadTone(load) { return load.status === 'balanced' ? 'good' : load.status === 'watch' || load.status === 'building' ? 'watch' : load.status === 'risk' ? 'risk' : 'neutral'; }
+function loadTone(load) { return load.status === 'balanced' ? 'good' : load.status === 'watch' || load.status === 'building' || load.status === 'underload' ? 'watch' : load.status === 'risk' ? 'risk' : 'neutral'; }
 function toneClass(status) { return ['green','good','balanced'].includes(status) ? 'green' : ['yellow','moderate','watch','building'].includes(status) ? 'yellow' : ['red','low','risk'].includes(status) ? 'red' : 'neutral'; }
 function toneColor(tone) { return ['green','good','balanced'].includes(tone) ? 'var(--green)' : ['yellow','watch','moderate','building'].includes(tone) ? 'var(--amber)' : ['red','risk','low'].includes(tone) ? 'var(--red)' : 'var(--blue)'; }
 function formatWeekChange(value, en) { return value == null ? (en ? 'not enough history' : 'ยังไม่มีประวัติเทียบ') : `${value > 0 ? '+' : ''}${value}%`; }
