@@ -1,9 +1,9 @@
 {
   "name": "trail-runner-coach",
-  "version": "2.5.2",
+  "version": "2.6.0",
   "private": true,
   "type": "module",
-  "description": "Mobile-first trail coach with Strava-safe Apple Health insights and Health Auto Export REST API ingestion",
+  "description": "Mobile-first trail coach with a unified recovery, training load and energy dashboard",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",

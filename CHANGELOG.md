@@ -1,3 +1,23 @@
+## 2.6.0 — Unified Health & Training Dashboard
+
+- Rebuilt Today around one provider-neutral athlete view instead of separate Apple Health and Strava sections.
+- Added a single Daily Readiness hero with confidence, today’s session and an actionable coaching recommendation.
+- Added three outcome pillars: Recovery, Training Load Balance and Energy & Fuel, each with a 7-day sparkline and drill-down route.
+- Added a unified Health Snapshot for Sleep, Resting HR, HRV, Steps, Active Energy and Walking/Running Distance with personal-baseline deltas and freshness dates.
+- Added a new Health & Recovery detail page with 7-day and 28-day charts, contributors, training context and data-quality confidence.
+- Removed provider names from the main Today experience and recent-activity cards; provider details remain available in Data & Sync for traceability.
+- Added an explainable Coach Insight section that converts recovery, load, pain and fueling signals into a practical action.
+- Preserved Strava, Apple Health, Health Auto Export, Workers, KV bindings, secrets, tokens and IndexedDB schema unchanged.
+- Bumped package, application and PWA cache versions to 2.6.0.
+- Repository verification, all 72 automated tests and Cloudflare dry-run passed.
+
+## 2.5.3 — Latest non-null Apple Health metrics
+
+- Displays the latest available value separately for Steps, Active Energy, Exercise Minutes, Distance, Sleep, Resting HR and HRV within the 7-day insight window.
+- Keeps current-day movement visible while falling back to the previous completed day for Sleep, Resting HR or HRV when today's export is incomplete.
+- Shows the source date on every Apple Health metric card so historical fallback values are transparent.
+- Does not alter Apple Health Worker data, Strava sync, tokens, KV bindings, encryption secrets or IndexedDB schema.
+
 # Changelog
 
 ## 2.5.2 — Buddhist Era Date Normalization
