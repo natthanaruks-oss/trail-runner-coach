@@ -154,7 +154,7 @@ function bindGlobalEvents() {
     schedulePlanReconciliation();
     const route = currentRoute();
     if (route === 'connections') refreshConnectionsSyncUi(view, store.getState(), app);
-    else if (route === 'connections-home' || route === 'more' || route === 'plan' || route === 'checkin') render();
+    else { const reactiveRoutes = ['today','coach','ai-coach','health','progress','connections-home','more','plan','checkin']; if (reactiveRoutes.includes(route)) render(); }
   });
   window.addEventListener('trail-runner-coach:cloud-backup-state', () => {
     if (currentRoute() === 'cloud-backup') render();
