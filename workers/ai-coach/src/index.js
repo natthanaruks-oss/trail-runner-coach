@@ -69,19 +69,7 @@ Return JSON only and follow the provided schema.
 
 export function createAiCoachHandler({ runModel } = {}) {
   return async function handle(request, env = {}) {
-    const origin = normalizeOrigin(env.APP_ORIGIN);
-    const cors = corsHeaders(origin);
-
-    if (request.method === 'OPTIONS') {
-      if (!originAllowed(request, origin)) {
-        return json({ error: 'Origin not allowed' }, 403, cors);
-      }
-      return new Response(null, { status: 204, headers: cors });
-    }
-
-    if (!originAllowed(request, origin)) {
-      return json({ error: 'Origin not allowed' }, 403, cors);
-    }
+    const requestOrigin = normalizeOrigin(request.headers.get('origin')); const cors = corsHeaders(requestOrigin); if (request.method === 'OPTIONS') { return new Response(null, { status: 204, headers: cors }); }
 
     const url = new URL(request.url);
 

@@ -1,5 +1,7 @@
 const CACHE_PREFIX = 'trc_ai_coach_explanation_v1:';
 const CACHE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+const AI_REQUEST_TIMEOUT_MS = 75000;
+const AI_HEALTH_TIMEOUT_MS = 8000;
 
 export function getAiCoachConfig(settings = {}) {
   const value = settings?.integrations?.aiCoach || {};
@@ -21,7 +23,9 @@ export async function requestAiCoachExplanation({
   settings,
   snapshot,
   force = false,
-  fetchImpl = globalThis.fetch
+  fetchImpl = globalThis.fetch,
+  timeoutMs = AI_REQUEST_TIMEOUT_MS,
+  locationOrigin = globalThis.location?.origin || ''
 }) {
   if (!snapshot?.digest || !snapshot?.decision?.actionCode) {
     throw new Error('AI Coach snapshot ไม่ครบ');
@@ -42,36 +46,167 @@ export async function requestAiCoachExplanation({
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  const startedAt = Date.now();
+  const timeout = setTimeout(
+    () => controller.abort('ai-coach-timeout'),
+    timeoutMs
+  );
 
   let response;
+
   try {
-    response = await fetchImpl(`${config.baseUrl}/v1/explain`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ snapshot }),
-      signal: controller.signal
-    });
+    response = await fetchImpl(
+      `${config.baseUrl}/v1/explain`,
+      {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ snapshot }),
+        signal: controller.signal
+      }
+    );
   } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new Error('AI Coach ใช้เวลานานเกินไป กรุณาลองใหม่');
-    }
-    throw new Error(error?.message || 'เชื่อมต่อ AI Coach ไม่สำเร็จ');
+    const elapsedMs = Date.now() - startedAt;
+    const diagnosis = await diagnoseAiCoachConnection({
+      baseUrl: config.baseUrl,
+      fetchImpl
+    });
+
+    throw new Error(
+      classifyAiCoachFetchFailure({
+        error,
+        diagnosis,
+        elapsedMs,
+        timeoutMs,
+        locationOrigin
+      })
+    );
   } finally {
     clearTimeout(timeout);
   }
 
   const payload = await response.json().catch(() => ({}));
+
   if (!response.ok) {
-    throw new Error(payload?.error || `AI Coach HTTP ${response.status}`);
+    throw new Error(
+      payload?.error || `AI Coach HTTP ${response.status}`
+    );
   }
 
   const validated = validateAiCoachPayload(payload, snapshot);
   writeCache(snapshot.digest, validated);
-  return { ...validated, cacheHit: false };
+
+  return {
+    ...validated,
+    cacheHit: false
+  };
+}
+
+export async function diagnoseAiCoachConnection({
+  baseUrl,
+  fetchImpl = globalThis.fetch,
+  timeoutMs = AI_HEALTH_TIMEOUT_MS
+}) {
+  if (typeof fetchImpl !== 'function') {
+    return {
+      reachable: false,
+      status: null,
+      configured: null,
+      error: 'fetch unavailable'
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort('ai-health-timeout'),
+    timeoutMs
+  );
+
+  try {
+    const response = await fetchImpl(
+      `${normalizeHttpsUrl(baseUrl)}/health?ts=${Date.now()}`,
+      {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json'
+        },
+        signal: controller.signal
+      }
+    );
+
+    const payload = await response.json().catch(() => ({}));
+
+    return {
+      reachable: response.ok,
+      status: response.status,
+      configured:
+        typeof payload?.configured === 'boolean'
+          ? payload.configured
+          : null,
+      provider: String(payload?.provider || ''),
+      model: String(payload?.model || ''),
+      error: response.ok
+        ? ''
+        : String(payload?.error || `HTTP ${response.status}`)
+    };
+  } catch (error) {
+    return {
+      reachable: false,
+      status: null,
+      configured: null,
+      error: String(error?.message || error || 'Load failed')
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export function classifyAiCoachFetchFailure({
+  error,
+  diagnosis,
+  elapsedMs = 0,
+  timeoutMs = AI_REQUEST_TIMEOUT_MS,
+  locationOrigin = ''
+}) {
+  const raw = String(error?.message || error || '').trim();
+  const timedOut =
+    error?.name === 'AbortError' ||
+    elapsedMs >= Math.max(1000, timeoutMs - 1000);
+
+  if (timedOut) {
+    return 'AI Coach ใช้เวลาประมวลผลนานเกินไป กรุณากดลองอีกครั้ง';
+  }
+
+  if (globalThis.navigator?.onLine === false) {
+    return 'อุปกรณ์ไม่ได้เชื่อมต่ออินเทอร์เน็ต';
+  }
+
+  if (diagnosis?.reachable) {
+    if (diagnosis.configured === false) {
+      return 'AI Worker ติดต่อได้ แต่ Workers AI หรือ Access Token ยังตั้งค่าไม่ครบ';
+    }
+
+    const origin = locationOrigin || 'ไม่ทราบ Origin';
+    return (
+      'AI Worker ติดต่อได้ แต่ Browser ส่งคำขอ AI ไม่สำเร็จ ' +
+      `(App Origin: ${origin}). ` +
+      'กรุณาปิดแอปแล้วเปิดผ่าน Safari หนึ่งครั้ง ก่อนลองใหม่'
+    );
+  }
+
+  return (
+    'Browser ติดต่อ AI Worker ไม่ได้ ' +
+    `(รายละเอียด: ${raw || diagnosis?.error || 'Load failed'})`
+  );
 }
 
 export function validateAiCoachPayload(payload, snapshot) {
