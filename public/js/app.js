@@ -18,6 +18,7 @@ import { renderData, manualActivityRecord } from './views/data.js';
 import { renderSettings } from './views/settings.js';
 import { renderBody } from './views/body.js';
 import { renderRaces } from './views/races.js';
+import { renderRaceRoadmap } from './views/race-roadmap.js';
 import { renderTraining } from './views/training.js';
 import { renderFuel } from './views/fuel.js';
 import { renderLog } from './views/log.js';
@@ -55,6 +56,7 @@ const routes = {
   settings: renderSettings,
   body: renderBody,
   races: renderRaces,
+  roadmap: renderRaceRoadmap,
   train: renderTraining,
   fuel: renderFuel,
   log: renderLog,
@@ -125,7 +127,7 @@ function render(options = {}) {
     ? 'train'
     : route === 'nutrition'
       ? 'fuel'
-      : ['pain','body','data','connections','connections-home','cloud-backup','apple-health-shortcut','settings','races','gear','motivation','more','log','checkin','progress'].includes(route)
+      : ['pain','body','data','connections','connections-home','cloud-backup','apple-health-shortcut','settings','races','roadmap','gear','motivation','more','log','checkin','progress'].includes(route)
         ? 'more'
         : ['scores','health','coach','ai-coach'].includes(route) ? 'today' : route;
   document.querySelectorAll('[data-route]').forEach(link => {
@@ -154,7 +156,7 @@ function bindGlobalEvents() {
     schedulePlanReconciliation();
     const route = currentRoute();
     if (route === 'connections') refreshConnectionsSyncUi(view, store.getState(), app);
-    else { const reactiveRoutes = ['today','coach','ai-coach','health','progress','connections-home','more','plan','checkin']; if (reactiveRoutes.includes(route)) render(); }
+    else { const reactiveRoutes = ['today','coach','ai-coach','health','progress','connections-home','more','plan','checkin','roadmap']; if (reactiveRoutes.includes(route)) render(); }
   });
   window.addEventListener('trail-runner-coach:cloud-backup-state', () => {
     if (currentRoute() === 'cloud-backup') render();

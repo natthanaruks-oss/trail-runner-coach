@@ -7,38 +7,9 @@ const AUTO_REFRESH_DELAY_MS = 2400;
 const timers = new WeakMap();
 
 export function buildAiCoachExplanationKey(snapshot = {}) {
-  const decision = snapshot.decision || {};
-  const planned = snapshot.plannedSession || null;
-  const material = {
-    version: 'home_coach_key_v1',
-    date: snapshot.date || '',
-    language: snapshot.language || 'th',
-    decision: {
-      actionCode: decision.actionCode || 'follow_plan',
-      status: decision.status || 'green',
-      hardStop: Boolean(decision.hardStop),
-      suggestedType: decision.suggestedType || 'Rest',
-      suggestedDistanceKm: numberOrNull(decision.suggestedDistanceKm),
-      suggestedVerticalM: numberOrNull(decision.suggestedVerticalM),
-      intensityCode: decision.intensityCode || 'planned'
-    },
-    plannedSession: planned
-      ? {
-          type: planned.type || 'Rest',
-          title: planned.title || '',
-          distanceKm: numberOrNull(planned.distanceKm),
-          verticalM: numberOrNull(planned.verticalM),
-          durationMin: numberOrNull(planned.durationMin)
-        }
-      : null,
-    readinessBand: snapshot.readiness?.status || 'unknown',
-    recoveryBand: snapshot.pillars?.recovery?.status || 'unknown',
-    loadBand: snapshot.pillars?.load?.status || 'unknown',
-    energyBand: snapshot.pillars?.energy?.status || 'unknown',
-    raceStage: snapshot.race?.stage || 'unknown'
-  };
-
-  return `hc1-${fnv1a(stableStringify(material))}`;
+  // v4: every material snapshot revision gets a new key. This prevents a
+  // changed activity/readiness/race horizon from reusing an older response.
+  return `hc4-${String(snapshot.digest || fnv1a(stableStringify(snapshot)))}`;
 }
 
 export function getHomeCoachRuntime(app, snapshot) {

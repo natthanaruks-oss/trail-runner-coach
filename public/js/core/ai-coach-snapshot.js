@@ -1,3 +1,4 @@
+import { buildRaceHorizonCoach, compactHorizonForAi } from './race-horizon-coach.js';
 const finite = value =>
   value !== null &&
   value !== undefined &&
@@ -5,14 +6,18 @@ const finite = value =>
   Number.isFinite(Number(value));
 
 export function buildAiCoachSnapshot({
+  state = {},
   today = {},
   unified = {},
   trailCoach = {},
   personalTrends = {},
   countdown = {},
+  week = {},
+  previousSnapshot = null,
   language = 'th'
 } = {}) {
   const prescription = trailCoach?.prescription || {};
+  const horizonModel = buildRaceHorizonCoach({ state, today, unified, trailCoach, week, endDateKey: today?.dateKey });
   const session = today?.plan?.todaySession || null;
   const decision = {
     actionCode: String(prescription.actionCode || 'follow_plan'),
@@ -36,6 +41,7 @@ export function buildAiCoachSnapshot({
 
   const snapshot = {
     version: 'ai_coach_snapshot_v1',
+    contextVersion: 4,
     date: String(today?.dateKey || ''),
     language: language === 'en' ? 'en' : 'th',
     decision,
@@ -65,6 +71,7 @@ export function buildAiCoachSnapshot({
       readinessConfidence: bounded(trailCoach?.race?.confidence),
       stage: textValue(trailCoach?.race?.stage, 'unknown')
     },
+    horizon: compactHorizonForAi(horizonModel, language),
     longRun: {
       score: numberOrNull(trailCoach?.longRun?.score),
       confidence: bounded(trailCoach?.longRun?.confidence),
@@ -76,6 +83,7 @@ export function buildAiCoachSnapshot({
       sleepDebtHours: numberOrNull(personalTrends?.sleep?.debtHours),
       loadWeekChangePct: numberOrNull(unified?.pillars?.load?.weekChangePct)
     },
+    changeContext: buildChangeContext(previousSnapshot, { decision, horizonModel, unified }),
     privacy: {
       rawHealthRowsExcluded: true,
       directIdentityExcluded: true,
@@ -97,6 +105,30 @@ export function digestSnapshot(snapshot) {
     hash = Math.imul(hash, 16777619);
   }
   return `ac1-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+
+function buildChangeContext(previousSnapshot, current = {}) {
+  const previous = previousSnapshot && typeof previousSnapshot === 'object'
+    ? previousSnapshot
+    : null;
+  if (!previous) {
+    return {
+      previousDigest: '',
+      changed: true,
+      changeCodes: ['first_evaluation']
+    };
+  }
+  const codes = [];
+  if (previous?.decision?.actionCode !== current.decision?.actionCode) codes.push('decision_changed');
+  if (previous?.horizon?.daysRemaining !== current.horizonModel?.daysRemaining) codes.push('countdown_changed');
+  if (previous?.horizon?.block?.focus !== current.horizonModel?.block?.focus) codes.push('block_changed');
+  if (previous?.readiness?.score !== current.unified?.readiness?.score) codes.push('readiness_changed');
+  return {
+    previousDigest: String(previous?.digest || ''),
+    changed: codes.length > 0,
+    changeCodes: codes.length ? codes : ['re_evaluated_no_material_change']
+  };
 }
 
 function compactPillar(item = {}) {

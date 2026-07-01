@@ -50,14 +50,14 @@ function snapshot(overrides = {}) {
   };
 }
 
-test('minor readiness score change keeps the same AI explanation key', () => {
+test('any material snapshot digest change invalidates the AI explanation key', () => {
   const first = snapshot();
   const second = snapshot({
     digest: 'ac1-b',
     readiness: { score: 84, status: 'good' }
   });
 
-  assert.equal(
+  assert.notEqual(
     buildAiCoachExplanationKey(first),
     buildAiCoachExplanationKey(second)
   );
@@ -80,9 +80,9 @@ test('material recommendation changes invalidate the key', () => {
   );
 });
 
-test('same material key keeps prior result and marks new raw data as stale', () => {
+test('changed digest does not reuse a prior result', () => {
   const current = snapshot();
-  const key = buildAiCoachExplanationKey(current);
+  const key = buildAiCoachExplanationKey(snapshot({ digest: 'ac1-old' }));
   const app = {
     ui: {
       homeAiCoach: {
@@ -100,8 +100,8 @@ test('same material key keeps prior result and marks new raw data as stale', () 
   };
 
   const runtime = getHomeCoachRuntime(app, current);
-  assert.equal(runtime.result.explanation.headline, 'ทำตามแผนได้');
-  assert.equal(runtime.staleData, true);
+  assert.equal(runtime.result, null);
+  assert.equal(runtime.staleData, false);
 });
 
 test('scheduler deduplicates a pending material decision', () => {

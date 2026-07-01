@@ -5,6 +5,7 @@ import { buildPersonalTrends } from '../core/personal-trends.js';
 import { buildTrailCoachIntelligence } from '../core/trail-coach.js';
 import { buildAiCoachSnapshot } from '../core/ai-coach-snapshot.js';
 import { renderHomeCoachSurface, bindHomeCoachSurface } from './home-coach-surface.js';
+import { renderRaceMissionCard } from './race-mission-card.js';
 import { buildMorningCoach } from '../core/morning-coach.js';
 import { formatNumber, metricCard, pageHeader, escapeHtml } from './components.js';
 import { formatThaiDate } from '../core/date.js';
@@ -31,12 +32,14 @@ export function renderDashboard(container, state, app) {
   const unified = buildUnifiedInsights({ today, health, scoreHistory, nutritionBalance, nutritionTarget: nutritionPlan });
   const personalTrends = buildPersonalTrends({ healthRows: health.rows, activities: state.activities, endDateKey: today.dateKey, rangeDays: 90, sleepTargetHours: 7.5 });
   const trailCoach = buildTrailCoachIntelligence({ state, today, unified, personalTrends, week, countdown, endDateKey: today.dateKey });
-  const morningCoach = buildMorningCoach({ today, unified, trailCoach, personalTrends, nutritionBalance }); const aiCoachSnapshot = buildAiCoachSnapshot({ today, unified, trailCoach, personalTrends, countdown, language: app.language }); const en = app.language === 'en';
+  const morningCoach = buildMorningCoach({ today, unified, trailCoach, personalTrends, nutritionBalance }); const previousAiCoachSnapshot = app.ui.homeAiCoach?.lastSnapshot || null; const aiCoachSnapshot = buildAiCoachSnapshot({ state, today, unified, trailCoach, personalTrends, countdown, week, previousSnapshot: previousAiCoachSnapshot, language: app.language }); app.ui.homeAiCoach = { ...(app.ui.homeAiCoach || {}), lastSnapshot: aiCoachSnapshot }; const en = app.language === 'en';
 
   container.innerHTML = `
     ${pageHeader(en ? 'Today' : 'วันนี้', formatThaiDate(today.dateKey), today.race ? `${escapeHtml(today.race.name)} · ${escapeHtml(raceSummary(today.race))}` : (en ? 'Choose a target race to start planning' : 'เลือกสนามเป้าหมายเพื่อเริ่มวางแผน'))}
 
-    ${renderReadinessHero({ today, session, todayWorkout, unified, trailCoach, en, app })} ${renderHomeCoachSurface({ snapshot: aiCoachSnapshot, app, en })}
+    ${renderReadinessHero({ today, session, todayWorkout, unified, trailCoach, en, app })}
+    ${renderRaceMissionCard({ state, today, unified, trailCoach, week, en })}
+    ${renderHomeCoachSurface({ snapshot: aiCoachSnapshot, app, en })}
 
     <section class="section unified-pillars-section">
       <div class="section-head"><div><h2>${en ? 'Your training state' : 'สถานะการฝึกวันนี้'}</h2><small>${en ? 'One view of recovery, load and energy' : 'รวม Recovery, Training Load และ Energy ไว้ในภาพเดียว'}</small></div><a href="#/health">${en ? 'View analysis' : 'ดูการวิเคราะห์'}</a></div>

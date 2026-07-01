@@ -25,7 +25,7 @@ test('sync-state rerenders the Today route after wearable or workout sync', asyn
   );
 });
 
-test('PWA cache and app version are upgraded to 3.1.0', async () => {
+test('PWA cache and app version are upgraded to 4.0.0', async () => {
   const [constants, worker, pkg] = await Promise.all([
     readFile(
       new URL('../public/js/core/constants.js', import.meta.url),
@@ -41,7 +41,7 @@ test('PWA cache and app version are upgraded to 3.1.0', async () => {
     )
   ]);
 
-  assert.match(constants, /APP_VERSION\s*=\s*'3\.1\.0'/);
-  assert.match(worker, /trail-runner-coach-v3\.1\.0/);
-  assert.equal(JSON.parse(pkg).version, '3.1.0');
+  assert.match(constants, /APP_VERSION\s*=\s*'4\.0\.0'/);
+  assert.match(worker, /trail-runner-coach-v4\.0\.0/);
+  assert.equal(JSON.parse(pkg).version, '4.0.0');
 });

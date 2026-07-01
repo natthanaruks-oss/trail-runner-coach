@@ -9,7 +9,7 @@ export function renderRaces(container, state, app) {
 
   container.innerHTML = `
     ${pageHeader('สนามเป้าหมาย', 'Race Profile และ Training Plan แยกจากกัน เพื่อรองรับหลายสนามในอนาคต', 'Multi-race control center')}
-    ${activeRace ? `<section class="card hero"><div class="eyebrow">ACTIVE RACE</div><h2 style="font-size:25px;margin:8px 0 5px">${escapeHtml(activeRace.name)}</h2><p style="color:var(--muted);margin:0">${escapeHtml(activeRace.date)} · ${escapeHtml(raceSummary(activeRace))}</p><div class="button-row" style="margin-top:14px"><button class="button secondary" data-edit-race="${activeRace.id}">แก้ไขสนาม</button><a class="button primary" href="#/plan">เปิดแผนซ้อม</a></div><div class="submetric" style="margin-top:10px">Plan: ${escapeHtml(activePlan?.name || 'ยังไม่มีแผน')}</div></section>` : ''}
+    ${activeRace ? `<section class="card hero"><div class="eyebrow">ACTIVE RACE</div><h2 style="font-size:25px;margin:8px 0 5px">${escapeHtml(activeRace.name)}</h2><p style="color:var(--muted);margin:0">${escapeHtml(activeRace.date)} · ${escapeHtml(raceSummary(activeRace))}</p><div class="button-row" style="margin-top:14px"><button class="button secondary" data-edit-race="${activeRace.id}">แก้ไขสนาม</button><a class="button primary" href="#/plan">เปิดแผนซ้อม</a><a class="button secondary" href="#/roadmap">เปิด Race Roadmap</a></div><div class="submetric" style="margin-top:10px">Plan: ${escapeHtml(activePlan?.name || 'ยังไม่มีแผน')}</div></section>` : ''}
 
     <section class="section"><div class="section-head"><h2>สนามทั้งหมด</h2><span>${state.raceProfiles.length} รายการ</span></div><div class="list">
       ${state.raceProfiles.map(race => {
@@ -26,6 +26,8 @@ export function renderRaces(container, state, app) {
         <div class="field"><label>วันแข่งขัน</label><input type="date" name="date" required value="${escapeHtml(editing?.date || '')}"></div>
         <div class="field"><label>เวลา Start</label><input type="time" name="startTime" value="${escapeHtml(editing?.startTime || '06:00')}"></div>
         <div class="field full"><label>สถานที่</label><input name="location" value="${escapeHtml(editing?.location || '')}"></div>
+        <div class="field"><label>Race Priority</label><select name="priority"><option value="A" ${editing?.priority === 'A' || !editing?.priority ? 'selected' : ''}>A — เป้าหมายหลัก</option><option value="B" ${editing?.priority === 'B' ? 'selected' : ''}>B — สนามทดสอบ</option><option value="C" ${editing?.priority === 'C' ? 'selected' : ''}>C — Training race</option></select></div>
+        <div class="field"><label>Goal</label><select name="goalType"><option value="finish" ${editing?.goalType === 'finish' || !editing?.goalType ? 'selected' : ''}>Finish strong</option><option value="time" ${editing?.goalType === 'time' ? 'selected' : ''}>Time goal</option><option value="performance" ${editing?.goalType === 'performance' ? 'selected' : ''}>Performance</option></select></div>
         ${fieldNumber({name:'distanceKm',label:'ระยะทาง (km)',value:editing?.distanceKm ?? '',min:1,max:1000,step:.1})}
         ${fieldNumber({name:'elevationGainM',label:'Elevation gain (m)',value:editing?.elevationGainM ?? '',min:0,max:50000})}
         ${fieldNumber({name:'elevationLossM',label:'Elevation loss (m)',value:editing?.elevationLossM ?? '',min:0,max:50000})}
@@ -65,7 +67,7 @@ export function renderRaces(container, state, app) {
         id: data.get('id') || undefined,
         name: data.get('name'), edition: data.get('edition'), date: data.get('date'), startTime: data.get('startTime'), location: data.get('location'),
         distanceKm: data.get('distanceKm'), elevationGainM: data.get('elevationGainM'), elevationLossM: data.get('elevationLossM'), cutoffHours: data.get('cutoffHours'),
-        aidStations: data.get('aidStations'), technicalLevel: data.get('technicalLevel'), nightRunning: data.has('nightRunning'), notes: data.get('notes')
+        aidStations: data.get('aidStations'), technicalLevel: data.get('technicalLevel'), nightRunning: data.has('nightRunning'), priority: data.get('priority'), goalType: data.get('goalType'), notes: data.get('notes')
       });
       await app.store.upsertRecord(STORES.RACES, race);
       let plan = app.store.getState().trainingPlans.find(item => item.raceId === race.id && item.status === 'active') || app.store.getState().trainingPlans.find(item => item.raceId === race.id);

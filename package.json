@@ -1,14 +1,14 @@
 {
   "name": "trail-runner-coach",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
   "description": "Mobile-first trail coach with a unified recovery, training load and energy dashboard",
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy",
-    "test": "node --test",
-    "check": "node scripts/verify.mjs && node --test",
+    "test": "node --test 'test/**/*.test.js'",
+    "check": "node scripts/verify.mjs && node --test 'test/**/*.test.js'",
     "deploy:dry-run": "npx wrangler deploy --dry-run",
     "setup:strava": "node scripts/setup-strava.mjs",
     "setup:backup": "node scripts/setup-cloud-backup.mjs",
@@ -16,7 +16,7 @@
     "setup:apple-health-shortcut": "node scripts/setup-apple-health-shortcut.mjs",
     "deploy:apple-health-worker": "node scripts/deploy-apple-health-worker.mjs",
     "setup:ai-coach": "node scripts/setup-ai-coach.mjs",
-    "test:stable": "node --test --test-concurrency=1"
+    "test:stable": "node --test --test-concurrency=1 'test/**/*.test.js'"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.2.5",
