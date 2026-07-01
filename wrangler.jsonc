@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "trail-runner-coaches",
+  "name": "trail-runner-coachs",
   "compatibility_date": "2026-06-23",
   "assets": {
     "directory": "./public",
