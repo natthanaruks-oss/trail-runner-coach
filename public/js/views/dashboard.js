@@ -1,5 +1,5 @@
 import { selectRaceCountdown, selectToday, selectWeekSummary, selectRecentActivities, selectScoreHistory } from '../core/selectors.js';
-import { selectAppleHealthInsights } from '../core/health-insights.js';
+import { selectGoogleHealthInsights } from '../core/health-insights.js';
 import { buildUnifiedInsights } from '../core/unified-insights.js';
 import { buildPersonalTrends } from '../core/personal-trends.js';
 import { buildTrailCoachIntelligence } from '../core/trail-coach.js';
@@ -13,8 +13,8 @@ import { raceSummary } from '../core/races.js';
 import { foodTotals, nutritionTarget, dailyWaterTargetMl, energyBalanceForDate } from '../core/nutrition.js';
 import { STORES } from '../core/constants.js';
 import { nowIso } from '../core/date.js';
-import { syncProviderNow } from '../adapters/sync-manager.js';
-import { autoPullAppleHealth, latestAppleHealthProviderState, shouldAutoPullAppleHealth } from '../core/apple-health-auto-pull.js';
+import { getSyncState, isProviderSyncDue, syncProviderNow } from '../adapters/sync-manager.js';
+// GOOGLE_HEALTH_HOME_SYNC_V1: Today uses Google Health / Fitbit as its health source.
 
 export function renderDashboard(container, state, app) {
   const today = selectToday(state);
@@ -27,7 +27,7 @@ export function renderDashboard(container, state, app) {
   const nutritionBalance = energyBalanceForDate(state, today.dateKey);
   const water = state.waterLogs.find(item => item.date === today.dateKey)?.amountMl || 0;
   const waterTarget = dailyWaterTargetMl(state, today.dateKey);
-  const health = selectAppleHealthInsights(state, today.dateKey, 7);
+  const health = selectGoogleHealthInsights(state, today.dateKey, 7);
   const scoreHistory = selectScoreHistory(state, 7, today.dateKey);
   const unified = buildUnifiedInsights({ today, health, scoreHistory, nutritionBalance, nutritionTarget: nutritionPlan });
   const personalTrends = buildPersonalTrends({ healthRows: health.rows, activities: state.activities, endDateKey: today.dateKey, rangeDays: 90, sleepTargetHours: 7.5 });
@@ -129,14 +129,14 @@ export function renderDashboard(container, state, app) {
     const button = event.currentTarget;
     button.disabled = true;
     button.textContent = en ? 'Updating…' : 'กำลังอัปเดต…';
-    setDashboardSyncStatus(container, en ? 'Updating health data…' : 'กำลังอัปเดตข้อมูลสุขภาพ…');
+    setDashboardSyncStatus(container, en ? 'Updating Google Health / Fitbit…' : 'กำลังอัปเดต Google Health / Fitbit…');
     try {
-      const result = await syncProviderNow(app.store, 'apple_health', { days: 90, trigger: 'dashboard_manual', resetRetry: true });
+      const result = await syncProviderNow(app.store, 'google_health', { days: 90, trigger: 'dashboard_manual', resetRetry: true });
       const count = Number(result?.result?.checkins || 0);
-      app.toast(en ? `Health data updated: ${count} day(s)` : `อัปเดตข้อมูลสุขภาพแล้ว ${count} วัน`);
+      app.toast(en ? `Google Health updated: ${count} day(s)` : `อัปเดต Google Health แล้ว ${count} วัน`);
       app.render();
     } catch (error) {
-      const message = error.message || (en ? 'Health data update failed' : 'อัปเดตข้อมูลสุขภาพไม่สำเร็จ');
+      const message = error.message || (en ? 'Google Health update failed' : 'อัปเดต Google Health ไม่สำเร็จ');
       setDashboardSyncStatus(container, message, true);
       app.toast(message);
       button.disabled = false;
@@ -144,7 +144,7 @@ export function renderDashboard(container, state, app) {
     }
   });
 
-  bindHomeCoachSurface({ container, app, snapshot: aiCoachSnapshot }); scheduleDashboardAutoPull(container, state, app, health, en);
+  bindHomeCoachSurface({ container, app, snapshot: aiCoachSnapshot }); scheduleDashboardGoogleHealthSync(container, state, app, health, en);
 }
 
 function renderReadinessHero({ today, session, todayWorkout, unified, trailCoach, en, app }) {
@@ -190,7 +190,7 @@ function renderHealthSnapshot({ health, unified, today, en }) {
   const metrics = metricOrder.map(key => unified.metrics.find(item => item.key === key)).filter(Boolean);
   const syncText = unified.lastUpdatedAt ? `${en ? 'Updated' : 'อัปเดต'} ${formatTimestamp(unified.lastUpdatedAt, en)}` : (en ? 'No health data yet' : 'ยังไม่มีข้อมูลสุขภาพ');
   return `<section class="section health-snapshot-section">
-    <div class="section-head"><div><h2>${en ? 'Health snapshot' : 'ภาพรวมสุขภาพ'}</h2><small>${en ? 'Latest useful value for each metric' : 'แสดงค่าล่าสุดที่ใช้วิเคราะห์ได้ของแต่ละ Metric'}</small></div><a href="#/health">${en ? 'View details' : 'ดูรายละเอียด'}</a></div>
+    <div class="section-head"><div><h2>${en ? 'Google Health / Fitbit snapshot' : 'ภาพรวม Google Health / Fitbit'}</h2><small>${en ? 'Latest useful value for each metric' : 'แสดงค่าล่าสุดที่ใช้วิเคราะห์ได้ของแต่ละ Metric'}</small></div><a href="#/health">${en ? 'View details' : 'ดูรายละเอียด'}</a></div>
     <article class="card flat unified-health-card">
       <div class="health-snapshot-toolbar">
         <div><strong>${escapeHtml(syncText)}</strong><small>${health.trend.coverageDays}/${health.trend.days} ${en ? 'days available' : 'วันที่มีข้อมูล'} · ${en ? 'confidence' : 'ความมั่นใจ'} ${unified.coverage.confidence}%</small></div>
@@ -426,25 +426,88 @@ function setDashboardSyncStatus(container, message, error = false) {
   element.classList.toggle('error', error);
   element.classList.toggle('success', !error);
 }
-function scheduleDashboardAutoPull(container, state, app, health, en) {
-  if (!shouldAutoPullAppleHealth(state, health)) return;
-  const provider = latestAppleHealthProviderState(state);
+function scheduleDashboardGoogleHealthSync(container, state, app, health, en) {
+  const syncState = getSyncState(state);
+  const provider = syncState.providers?.google_health;
+  const intervalMin = syncState.autoSync?.intervalMin || 30;
+
+  if (!provider?.connected) {
+    setDashboardSyncStatus(
+      container,
+      en
+        ? 'Connect Google Health / Fitbit in Data & Sync.'
+        : 'เชื่อมต่อ Google Health / Fitbit ในเมนูข้อมูลและการเชื่อมต่อ',
+      true,
+    );
+    return;
+  }
+
+  if (!isProviderSyncDue(provider, intervalMin)) return;
+
   const button = container.querySelector('[data-dashboard-health-sync]');
-  if (button) { button.disabled = true; button.textContent = en ? 'Updating…' : 'กำลังอัปเดต…'; }
-  setDashboardSyncStatus(container, en ? 'Checking for updated health data…' : 'กำลังตรวจข้อมูลสุขภาพล่าสุด…');
+  if (button) {
+    button.disabled = true;
+    button.textContent = en ? 'Updating…' : 'กำลังอัปเดต…';
+  }
+
+  setDashboardSyncStatus(
+    container,
+    en
+      ? 'Checking Google Health / Fitbit for new data…'
+      : 'กำลังตรวจข้อมูลล่าสุดจาก Google Health / Fitbit…',
+  );
+
   queueMicrotask(async () => {
     try {
-      const result = await autoPullAppleHealth(app, { days: 90, trigger: 'dashboard_auto' });
-      const count = Number(result?.result?.checkins || 0);
-      if (count > 0) { app.toast(en ? `Health data imported: ${count} day(s)` : `นำเข้าข้อมูลสุขภาพแล้ว ${count} วัน`); app.render(); return; }
-      setDashboardSyncStatus(container, en ? 'The sync service responded, but no supported daily data was found.' : 'ระบบ Sync ตอบกลับแล้ว แต่ยังไม่มี Daily Metric ที่รองรับ', true);
+      const result = await syncProviderNow(app.store, 'google_health', {
+        days: provider.lastSuccessAt ? 14 : 90,
+        trigger: 'dashboard_auto',
+        throwOnError: true,
+      });
+      const imported = result?.result || {};
+      const dailyCount = Number(imported.checkins || 0);
+      const changedCount =
+        dailyCount +
+        Number(imported.added || 0) +
+        Number(imported.updated || 0) +
+        Number(imported.merged || 0) +
+        Number(imported.bodyComposition || 0);
+
+      if (changedCount > 0) {
+        app.toast(
+          en
+            ? `Google Health updated: ${dailyCount} day(s)`
+            : `อัปเดต Google Health แล้ว ${dailyCount} วัน`,
+        );
+        app.render();
+        return;
+      }
+
+      setDashboardSyncStatus(
+        container,
+        en
+          ? 'Google Health / Fitbit is up to date.'
+          : 'ข้อมูล Google Health / Fitbit เป็นปัจจุบันแล้ว',
+      );
     } catch (error) {
-      setDashboardSyncStatus(container, error?.message || provider?.lastError || (en ? 'Automatic update failed' : 'อัปเดตอัตโนมัติไม่สำเร็จ'), true);
+      setDashboardSyncStatus(
+        container,
+        error?.message ||
+          provider?.lastError ||
+          (en
+            ? 'Google Health automatic update failed'
+            : 'อัปเดต Google Health อัตโนมัติไม่สำเร็จ'),
+        true,
+      );
     } finally {
-      if (button?.isConnected) { button.disabled = false; button.textContent = en ? 'Update' : 'อัปเดต'; }
+      if (button?.isConnected) {
+        button.disabled = false;
+        button.textContent = en ? 'Update' : 'อัปเดต';
+      }
     }
   });
 }
+
 function renderPainAlert(today, en) {
   const pain = today.readiness?.pain;
   if (!pain || (!pain.caution && !pain.hardStop)) return '';

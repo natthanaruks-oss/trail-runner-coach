@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "version": "4.0.1",
+  "installedAt": "2026-07-14T15:15:15.259Z",
+  "purpose": "Use Google Health / Fitbit for Today dashboard metrics, manual sync, and dashboard auto sync",
+  "changedFiles": [
+    "public/js/views/dashboard.js",
+    "public/js/core/health-insights.js",
+    "public/service-worker.js",
+    "test/google-health-home-sync.test.js"
+  ],
+  "originalHashes": {
+    "dashboard": "8122360bb2e6ff7028311191b25b6f5710d9d70bef710f8e41ebed224673e3b8",
+    "healthInsights": "40dfdfe3a5c65b20f1aa132e44f1386c718303eb6c08005b380b1186fb7e674b",
+    "serviceWorker": "c8372442c30512bcc74a5d2cd52373354aa4788b96baae4ba7623b15ec83b715"
+  },
+  "updatedHashes": {
+    "dashboard": "39bdbe2d630b88aee27bb9524b99ee59efa1660d84c1ab95123a19446660134a",
+    "healthInsights": "65b80c5d31aefcd395c2fdc3deb0b556354147052812b28fbdb7285427d25b84",
+    "serviceWorker": "570f1c4d897e99423aba2bea9897d36efa0daef59380dec89a2ae5bd0a040d45",
+    "test": "f52f97f97b98d854332cf4feb5bc8ac3e909401410d40c74b3032187c536590d"
+  },
+  "backupDirectory": ".google-health-home-sync-backup-v4.0.1",
+  "preserves": [
+    "Apple Health connection screens and adapters",
+    "IndexedDB schema",
+    "Cloudflare Worker configuration",
+    "OAuth credentials and KV bindings",
+    "Strava sync and cross-provider deduplication"
+  ]
+}

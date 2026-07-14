@@ -127,3 +127,165 @@ function finiteOrNull(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
+
+
+// GOOGLE_HEALTH_HOME_SYNC_V1
+export function selectGoogleHealthInsights(state, dateKey = localDateKey(), days = 7) {
+  const checkins = state.checkins || [];
+  const bodyComposition = state.bodyComposition || [];
+  const todayCheckin = checkins.find(item => item.date === dateKey) || null;
+  const todayGoogleCheckin = hasGoogleHealthSource(todayCheckin) ? todayCheckin : null;
+  const googleCheckins = checkins
+    .filter(item => item.date <= dateKey && hasGoogleHealthSource(item))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const latestGoogleCheckin = googleCheckins[0] || null;
+  const googleCheckin = todayGoogleCheckin || latestGoogleCheckin;
+
+  const rows = dateRange(
+    dateKey,
+    Math.max(1, Math.min(30, Number(days) || 7)),
+  ).map(date => {
+    const item =
+      checkins.find(
+        record => record.date === date && hasGoogleHealthSource(record),
+      ) || null;
+
+    return {
+      date,
+      checkin: item,
+      steps: finiteOrNull(item?.steps),
+      activeEnergyKcal: finiteOrNull(item?.activeEnergyKcal),
+      exerciseMinutes: finiteOrNull(item?.exerciseMinutes),
+      walkingRunningDistanceKm: finiteOrNull(
+        item?.walkingRunningDistanceKm,
+      ),
+      sleepHours: finiteOrNull(item?.sleepHours),
+      restingHr: finiteOrNull(item?.restingHr),
+      hrvMs: finiteOrNull(item?.hrvMs),
+    };
+  });
+
+  const latestMetricEntries = Object.fromEntries(
+    DISPLAY_KEYS.map(key => [
+      key,
+      selectLatestReadinessMetric(googleCheckins, key, dateKey),
+    ]),
+  );
+  const syncMeta = latestGoogleHealthSyncMeta(state.metadata || []);
+  const latestBody =
+    [...bodyComposition]
+      .filter(
+        item =>
+          item.source === "google_health" ||
+          item.sources?.includes?.("google_health"),
+      )
+      .sort((a, b) =>
+        String(b.measuredAt || b.date).localeCompare(
+          String(a.measuredAt || a.date),
+        ),
+      )[0] || null;
+  const target = nutritionTarget(state, dateKey);
+  const energyBalance = energyBalanceForDate(state, dateKey);
+  const metrics = Object.fromEntries(
+    DISPLAY_KEYS.map(key => [key, latestMetricEntries[key]?.value ?? null]),
+  );
+  const sourceMetricDates = Object.fromEntries(
+    DISPLAY_KEYS.map(key => [
+      key,
+      latestMetricEntries[key]?.sourceDate || null,
+    ]),
+  );
+  const metricDates = Object.fromEntries(
+    DISPLAY_KEYS.map(key => [
+      key,
+      latestMetricEntries[key]?.effectiveDate || null,
+    ]),
+  );
+  const metricAlignments = Object.fromEntries(
+    DISPLAY_KEYS.map(key => [
+      key,
+      latestMetricEntries[key]?.alignment || null,
+    ]),
+  );
+  const availableKeys = DISPLAY_KEYS.filter(key => metrics[key] != null);
+  const availableMetricDates = [
+    ...new Set(availableKeys.map(key => metricDates[key]).filter(Boolean)),
+  ];
+  const metricDate =
+    availableMetricDates
+      .sort((a, b) => String(b).localeCompare(String(a)))[0] ||
+    googleCheckin?.date ||
+    null;
+  const recoveryAvailable = RECOVERY_KEYS.filter(
+    key => metrics[key] != null,
+  ).length;
+  const behaviorAvailable = BEHAVIOR_KEYS.filter(
+    key => metrics[key] != null,
+  ).length;
+
+  return {
+    provider: "google_health",
+    dateKey,
+    metricDate,
+    metricDates,
+    sourceMetricDates,
+    metricAlignments,
+    hasMixedMetricDates: availableMetricDates.length > 1,
+    isCurrentDay: metricDate === dateKey,
+    checkin: googleCheckin,
+    hasData: availableKeys.length > 0,
+    partial:
+      availableKeys.length > 0 &&
+      availableKeys.length < DISPLAY_KEYS.length,
+    availableKeys,
+    metrics,
+    wearable: googleCheckin?.wearable || null,
+    source: googleCheckin?.source || null,
+    lastImportedAt:
+      googleCheckin?.wearable?.importedAt ||
+      syncMeta?.lastSuccessAt ||
+      syncMeta?.lastSyncAt ||
+      null,
+    syncMeta,
+    latestBody,
+    recoveryAvailable,
+    recoveryTotal: RECOVERY_KEYS.length,
+    behaviorAvailable,
+    behaviorTotal: BEHAVIOR_KEYS.length,
+    nutrition: {
+      target,
+      balance: energyBalance,
+      usesAppleActiveEnergy: false,
+      usesGoogleActiveEnergy: target.activitySource === "google_health",
+    },
+    trend: buildTrend(rows),
+    rows,
+  };
+}
+
+export function hasGoogleHealthSource(record) {
+  if (!record) return false;
+  if (record.source === "google_health") return true;
+  return Boolean(record.sources?.includes?.("google_health"));
+}
+
+function latestGoogleHealthSyncMeta(metadata) {
+  const direct =
+    metadata.find(item => item.id === "google_health_sync") || null;
+  const syncState =
+    metadata.find(item => item.id === "provider_sync_state_v1") || null;
+  const provider = syncState?.providers?.google_health || null;
+
+  if (!direct && !provider) return null;
+
+  return {
+    ...(direct || {}),
+    ...(provider || {}),
+    lastSyncAt: direct?.lastSyncAt || direct?.updatedAt || null,
+    lastSuccessAt:
+      provider?.lastSuccessAt ||
+      direct?.lastSyncAt ||
+      direct?.updatedAt ||
+      null,
+  };
+}
